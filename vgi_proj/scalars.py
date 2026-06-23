@@ -85,6 +85,8 @@ class TransformFunction(ScalarFunction):
     """``transform(x, y, from_crs, to_crs)`` -- general CRS->CRS transform."""
 
     class Meta:
+        """Function metadata."""
+
         name = "transform"
         description = (
             "Transform (x, y) from from_crs to to_crs as STRUCT(x, y); always_xy axis order. "
@@ -101,6 +103,7 @@ class TransformFunction(ScalarFunction):
 
     @classmethod
     def on_bind(cls, params: BindParameters) -> BindResult:
+        """Declare the STRUCT output type at plan time."""
         return BindResult(_XY_TYPE)
 
     @classmethod
@@ -111,12 +114,11 @@ class TransformFunction(ScalarFunction):
         from_crs: Annotated[str, ConstParam(_CRS_DOC)],
         to_crs: Annotated[str, ConstParam(_CRS_DOC)],
     ) -> Annotated[pa.StructArray, Returns(arrow_type=_XY_TYPE)]:
+        """Map each input row to its output value."""
         xs = x.to_pylist()
         ys = y.to_pylist()
         out = [
-            (lambda r: {"x": r.x, "y": r.y} if r is not None else None)(
-                projection.transform(xv, yv, from_crs, to_crs)
-            )
+            (lambda r: {"x": r.x, "y": r.y} if r is not None else None)(projection.transform(xv, yv, from_crs, to_crs))
             for xv, yv in zip(xs, ys, strict=True)
         ]
         return pa.array(out, type=_XY_TYPE)
@@ -131,6 +133,8 @@ class ToUtmFunction(ScalarFunction):
     """``to_utm(lon, lat)`` -- project into the point's auto-selected UTM zone."""
 
     class Meta:
+        """Function metadata."""
+
         name = "to_utm"
         description = (
             "Project WGS84 (lon, lat) into its auto-selected UTM zone as "
@@ -151,6 +155,7 @@ class ToUtmFunction(ScalarFunction):
 
     @classmethod
     def on_bind(cls, params: BindParameters) -> BindResult:
+        """Declare the STRUCT output type at plan time."""
         return BindResult(_UTM_TYPE)
 
     @classmethod
@@ -159,6 +164,7 @@ class ToUtmFunction(ScalarFunction):
         lon: Annotated[pa.DoubleArray, Param(doc="Longitude in degrees (-180..180).")],
         lat: Annotated[pa.DoubleArray, Param(doc="Latitude in degrees (-90..90).")],
     ) -> Annotated[pa.StructArray, Returns(arrow_type=_UTM_TYPE)]:
+        """Map each input row to its output value."""
         lons = lon.to_pylist()
         lats = lat.to_pylist()
         out = []
@@ -186,6 +192,8 @@ class ToWebMercatorFunction(ScalarFunction):
     """``to_webmercator(lon, lat)`` -- WGS84 -> Web Mercator metres."""
 
     class Meta:
+        """Function metadata."""
+
         name = "to_webmercator"
         description = "WGS84 (lon, lat) -> Web Mercator STRUCT(x, y) in metres (EPSG:4326->3857)"
         categories = ["proj", "webmercator"]
@@ -199,6 +207,7 @@ class ToWebMercatorFunction(ScalarFunction):
 
     @classmethod
     def on_bind(cls, params: BindParameters) -> BindResult:
+        """Declare the STRUCT output type at plan time."""
         return BindResult(_XY_TYPE)
 
     @classmethod
@@ -207,6 +216,7 @@ class ToWebMercatorFunction(ScalarFunction):
         lon: Annotated[pa.DoubleArray, Param(doc="Longitude in degrees (WGS84).")],
         lat: Annotated[pa.DoubleArray, Param(doc="Latitude in degrees (WGS84).")],
     ) -> Annotated[pa.StructArray, Returns(arrow_type=_XY_TYPE)]:
+        """Map each input row to its output value."""
         lons = lon.to_pylist()
         lats = lat.to_pylist()
         out = []
@@ -220,6 +230,8 @@ class FromWebMercatorFunction(ScalarFunction):
     """``from_webmercator(x, y)`` -- Web Mercator metres -> WGS84 lon/lat."""
 
     class Meta:
+        """Function metadata."""
+
         name = "from_webmercator"
         description = "Web Mercator (x, y) metres -> WGS84 STRUCT(lon, lat) (EPSG:3857->4326)"
         categories = ["proj", "webmercator"]
@@ -233,6 +245,7 @@ class FromWebMercatorFunction(ScalarFunction):
 
     @classmethod
     def on_bind(cls, params: BindParameters) -> BindResult:
+        """Declare the STRUCT output type at plan time."""
         return BindResult(_LONLAT_TYPE)
 
     @classmethod
@@ -241,6 +254,7 @@ class FromWebMercatorFunction(ScalarFunction):
         x: Annotated[pa.DoubleArray, Param(doc="Web Mercator easting (x) in metres.")],
         y: Annotated[pa.DoubleArray, Param(doc="Web Mercator northing (y) in metres.")],
     ) -> Annotated[pa.StructArray, Returns(arrow_type=_LONLAT_TYPE)]:
+        """Map each input row to its output value."""
         xs = x.to_pylist()
         ys = y.to_pylist()
         out = []
@@ -259,6 +273,8 @@ class GeodesicDistanceFunction(ScalarFunction):
     """``geodesic_distance(lon1, lat1, lon2, lat2)`` -- metres on WGS84."""
 
     class Meta:
+        """Function metadata."""
+
         name = "geodesic_distance"
         description = "Accurate ellipsoidal (WGS84) geodesic distance between two points, in metres"
         categories = ["proj", "distance"]
@@ -278,6 +294,7 @@ class GeodesicDistanceFunction(ScalarFunction):
         lon2: Annotated[pa.DoubleArray, Param(doc="Longitude of point 2 (-180..180).")],
         lat2: Annotated[pa.DoubleArray, Param(doc="Latitude of point 2 (-90..90).")],
     ) -> Annotated[pa.DoubleArray, Returns()]:
+        """Map each input row to its output value."""
         a, b, c, d = lon1.to_pylist(), lat1.to_pylist(), lon2.to_pylist(), lat2.to_pylist()
         return pa.array(
             [projection.geodesic_distance(*row) for row in zip(a, b, c, d, strict=True)],
@@ -289,6 +306,8 @@ class GeodesicBearingFunction(ScalarFunction):
     """``geodesic_bearing(lon1, lat1, lon2, lat2)`` -- initial azimuth degrees."""
 
     class Meta:
+        """Function metadata."""
+
         name = "geodesic_bearing"
         description = "Initial geodesic bearing (forward azimuth) from point 1 to point 2, degrees [0,360)"
         categories = ["proj", "distance"]
@@ -308,6 +327,7 @@ class GeodesicBearingFunction(ScalarFunction):
         lon2: Annotated[pa.DoubleArray, Param(doc="Longitude of point 2 (-180..180).")],
         lat2: Annotated[pa.DoubleArray, Param(doc="Latitude of point 2 (-90..90).")],
     ) -> Annotated[pa.DoubleArray, Returns()]:
+        """Map each input row to its output value."""
         a, b, c, d = lon1.to_pylist(), lat1.to_pylist(), lon2.to_pylist(), lat2.to_pylist()
         return pa.array(
             [projection.geodesic_bearing(*row) for row in zip(a, b, c, d, strict=True)],
@@ -324,6 +344,8 @@ class CrsUnitsFunction(ScalarFunction):
     """``crs_units(crs)`` -- unit name of the CRS's first axis."""
 
     class Meta:
+        """Function metadata."""
+
         name = "crs_units"
         description = "Unit name of a CRS's first axis (e.g. 'degree', 'metre'); unknown CRS -> error"
         categories = ["proj", "crs"]
@@ -336,9 +358,8 @@ class CrsUnitsFunction(ScalarFunction):
         ]
 
     @classmethod
-    def compute(
-        cls, crs: Annotated[pa.StringArray, Param(doc=_CRS_DOC)]
-    ) -> Annotated[pa.StringArray, Returns()]:
+    def compute(cls, crs: Annotated[pa.StringArray, Param(doc=_CRS_DOC)]) -> Annotated[pa.StringArray, Returns()]:
+        """Map each input row to its output value."""
         return pa.array([projection.crs_units(c) for c in crs.to_pylist()], type=pa.string())
 
 
@@ -346,6 +367,8 @@ class CrsNameFunction(ScalarFunction):
     """``crs_name(crs)`` -- human-readable CRS name."""
 
     class Meta:
+        """Function metadata."""
+
         name = "crs_name"
         description = "Human-readable name of a CRS (e.g. 'WGS 84'); unknown CRS -> error"
         categories = ["proj", "crs"]
@@ -358,9 +381,8 @@ class CrsNameFunction(ScalarFunction):
         ]
 
     @classmethod
-    def compute(
-        cls, crs: Annotated[pa.StringArray, Param(doc=_CRS_DOC)]
-    ) -> Annotated[pa.StringArray, Returns()]:
+    def compute(cls, crs: Annotated[pa.StringArray, Param(doc=_CRS_DOC)]) -> Annotated[pa.StringArray, Returns()]:
+        """Map each input row to its output value."""
         return pa.array([projection.crs_name(c) for c in crs.to_pylist()], type=pa.string())
 
 
@@ -368,6 +390,8 @@ class ProjVersionFunction(ScalarFunction):
     """``proj_version()`` -- version of the underlying PROJ library."""
 
     class Meta:
+        """Function metadata."""
+
         name = "proj_version"
         description = "Version string of the underlying PROJ library (bundled in the pyproj wheel)"
         categories = ["proj", "crs"]
@@ -383,6 +407,7 @@ class ProjVersionFunction(ScalarFunction):
         cls,
         _length: Annotated[int, OutputLength()],
     ) -> Annotated[pa.StringArray, Returns()]:
+        """Map each input row to its output value."""
         version = projection.proj_version()
         return pa.array([version] * _length, type=pa.string())
 
