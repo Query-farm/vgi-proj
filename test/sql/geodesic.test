@@ -1,0 +1,78 @@
+# name: test/sql/geodesic.test
+# description: Geodesic distance/bearing + CRS metadata -- known values, NULL handling, unknown-CRS error
+# group: [vgi_proj]
+
+require-env VGI_PROJ_WORKER
+
+statement ok
+LOAD vgi;
+
+statement ok
+ATTACH 'proj' AS proj (TYPE vgi, LOCATION '${VGI_PROJ_WORKER}');
+
+# New York -> London is ~5,585 km. Round to the nearest 10 km for a stable check.
+query I
+SELECT ROUND(proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074) / 1000.0, -1)
+       BETWEEN 5560 AND 5610;
+----
+true
+
+# Zero distance.
+query I
+SELECT ROUND(proj.geodesic_distance(10.0, 20.0, 10.0, 20.0));
+----
+0
+
+# Initial bearing NYC -> London is roughly north-east (~51 deg).
+query I
+SELECT ROUND(proj.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074)) BETWEEN 49 AND 53;
+----
+true
+
+# Due-east bearing along the equator is 90 degrees.
+query I
+SELECT ROUND(proj.geodesic_bearing(0.0, 0.0, 1.0, 0.0));
+----
+90
+
+# NULL input -> NULL output.
+query I
+SELECT proj.geodesic_distance(NULL, 40.7128, -0.1276, 51.5074) IS NULL;
+----
+true
+
+# Out-of-range coordinate -> NULL.
+query I
+SELECT proj.geodesic_distance(0.0, 0.0, 0.0, 91.0) IS NULL;
+----
+true
+
+# CRS metadata.
+query I
+SELECT proj.crs_name('EPSG:4326');
+----
+WGS 84
+
+query I
+SELECT proj.crs_units('EPSG:3857');
+----
+metre
+
+query I
+SELECT proj.crs_units('EPSG:4326');
+----
+degree
+
+# PROJ version looks like a dotted number.
+query I
+SELECT proj.proj_version() SIMILAR TO '[0-9]+\.[0-9]+.*';
+----
+true
+
+# Unknown CRS -> clear error (not a crash).
+statement error
+SELECT proj.crs_name('NOT_A_CRS');
+----
+
+statement ok
+DETACH proj;
