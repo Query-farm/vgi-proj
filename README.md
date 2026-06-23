@@ -4,7 +4,9 @@
 
 <p align="center"><em>A <a href="https://query.farm">Query.Farm</a> VGI worker for DuckDB.</em></p>
 
-# vgi-proj
+# CRS Transforms & Geodesic Distance in DuckDB
+
+> **vgi-proj** · a [Query.Farm](https://query.farm) VGI worker · powered by pyproj/PROJ
 
 [![CI](https://github.com/Query-farm/vgi-proj/actions/workflows/ci.yml/badge.svg)](https://github.com/Query-farm/vgi-proj/actions/workflows/ci.yml)
 
