@@ -44,7 +44,38 @@ from vgi.metadata import FunctionExample, NullHandling
 from vgi.scalar_function import BindParameters, BindResult, ScalarFunction
 
 from . import projection
+from .meta import object_tags
 from .schema_utils import field
+
+_SRC = "vgi_proj/scalars.py"
+
+# VGI509: at least one object ships guaranteed-runnable, catalog-qualified
+# examples. Each ``sql`` is self-contained and re-runnable against an attached
+# ``proj`` worker; ``expected_result`` is deliberately omitted (the linter only
+# needs each query to execute cleanly, and pinning floating-point output is
+# brittle for ellipsoidal/PROJ results).
+_EXECUTABLE_EXAMPLES = (
+    "["
+    '{"description": "Transform a WGS84 lon/lat point to Web Mercator metres.",'
+    " \"sql\": \"SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857') AS xy\"},"
+    '{"description": "Project San Francisco into its UTM zone (10N).",'
+    ' "sql": "SELECT proj.main.to_utm(-122.42, 37.77) AS utm"},'
+    '{"description": "Convert a WGS84 point to Web Mercator via the shorthand.",'
+    ' "sql": "SELECT proj.main.to_webmercator(-122.4194, 37.7749) AS xy"},'
+    '{"description": "Round-trip Web Mercator metres back to lon/lat.",'
+    ' "sql": "SELECT proj.main.from_webmercator(-13627665.27, 4547675.35) AS lonlat"},'
+    '{"description": "Geodesic distance New York to London, in metres.",'
+    ' "sql": "SELECT proj.main.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074) AS m"},'
+    '{"description": "Initial geodesic bearing from New York toward London, degrees.",'
+    ' "sql": "SELECT proj.main.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074) AS deg"},'
+    '{"description": "Human-readable name of the WGS84 CRS.",'
+    ' "sql": "SELECT proj.main.crs_name(\'EPSG:4326\') AS name"},'
+    '{"description": "Axis units of the Web Mercator CRS.",'
+    ' "sql": "SELECT proj.main.crs_units(\'EPSG:3857\') AS units"},'
+    '{"description": "Version of the bundled PROJ library.",'
+    ' "sql": "SELECT proj.main.proj_version() AS proj_version"}'
+    "]"
+)
 
 # ---------------------------------------------------------------------------
 # STRUCT return types (explicit -- the SDK cannot infer them).
@@ -100,6 +131,50 @@ class TransformFunction(ScalarFunction):
                 description="WGS84 lon/lat to Web Mercator metres",
             ),
         ]
+        tags = {
+            **object_tags(
+                title="Transform Coordinates Between CRSs",
+                doc_llm=(
+                    "# transform\n\n"
+                    "Reproject a single `(x, y)` coordinate pair from one coordinate "
+                    "reference system (CRS) to another, identified by **EPSG** code/string "
+                    "(e.g. `EPSG:4326` WGS84 lon/lat, `EPSG:3857` Web Mercator).\n\n"
+                    "**When to use:** any time you need to convert between map projections "
+                    "or geographic systems in SQL -- e.g. WGS84 lon/lat to a metric "
+                    "projection for distance/area work, or between two national grids.\n\n"
+                    "**Inputs:** `x` (longitude/easting in `from_crs`), `y` "
+                    "(latitude/northing in `from_crs`), `from_crs`, `to_crs`. The CRS "
+                    "arguments are constant-folded at plan time.\n\n"
+                    "**Output:** `STRUCT(x DOUBLE, y DOUBLE)` in the target CRS.\n\n"
+                    "**Axis order:** always `always_xy` -- inputs/outputs are "
+                    "`(x/easting/longitude, y/northing/latitude)` regardless of the CRS's "
+                    "declared native axis order.\n\n"
+                    "**Edge cases:** a NULL or non-finite coordinate yields a NULL struct; "
+                    "an unknown/invalid CRS raises a clear query error."
+                ),
+                doc_md=(
+                    "## transform(x, y, from_crs, to_crs)\n\n"
+                    "General CRS-to-CRS reprojection returning `STRUCT(x, y)` in the target "
+                    "system.\n\n"
+                    "### Usage\n\n"
+                    "```sql\n"
+                    "SELECT proj.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857');\n"
+                    "SELECT proj.transform(lon, lat, 'EPSG:4326', 'EPSG:32610').x FROM pts;\n"
+                    "```\n\n"
+                    "### Notes\n\n"
+                    "- Uses `always_xy` axis order: `(x/easting/longitude, "
+                    "y/northing/latitude)`.\n"
+                    "- NULL or non-finite coordinates produce a NULL struct.\n"
+                    "- An unknown CRS raises a DuckDB query error rather than crashing."
+                ),
+                keywords=(
+                    "transform, reproject, projection, coordinate transform, crs, epsg, "
+                    "wgs84, web mercator, 4326, 3857, convert coordinates, map projection"
+                ),
+                relative_path=_SRC,
+            ),
+            "vgi.executable_examples": _EXECUTABLE_EXAMPLES,
+        }
 
     @classmethod
     def on_bind(cls, params: BindParameters) -> BindResult:
@@ -152,6 +227,44 @@ class ToUtmFunction(ScalarFunction):
                 description="UTM zone number for San Francisco (10)",
             ),
         ]
+        tags = object_tags(
+            title="Project to UTM Zone",
+            doc_llm=(
+                "# to_utm\n\n"
+                "Project a WGS84 `(lon, lat)` point into its **auto-selected** Universal "
+                "Transverse Mercator (UTM) zone, returning the easting/northing in metres "
+                "plus the chosen zone and hemisphere.\n\n"
+                "**When to use:** when you want a locally-accurate metric coordinate for a "
+                "point without picking the zone yourself -- ideal for measuring distances "
+                "or areas in metres near a single location.\n\n"
+                "**Inputs:** `lon` (-180..180 degrees), `lat` (-90..90 degrees).\n\n"
+                "**Output:** `STRUCT(easting DOUBLE, northing DOUBLE, zone INT32, "
+                "hemisphere VARCHAR)`; `hemisphere` is `'N'` or `'S'`. The zone is derived "
+                "from the longitude (`floor(lon/6)+31`).\n\n"
+                "**Edge cases:** NULL, non-finite, or out-of-range (`|lat| > 90` / "
+                "`|lon| > 180`) coordinates yield a NULL struct."
+            ),
+            doc_md=(
+                "## to_utm(lon, lat)\n\n"
+                "Project WGS84 lon/lat into the point's automatically-selected UTM zone.\n\n"
+                "### Usage\n\n"
+                "```sql\n"
+                "SELECT proj.to_utm(-122.42, 37.77);        -- full struct\n"
+                "SELECT proj.to_utm(-122.42, 37.77).zone;   -- 10\n"
+                "SELECT proj.to_utm(lon, lat).easting FROM pts;\n"
+                "```\n\n"
+                "### Notes\n\n"
+                "- Returns `STRUCT(easting, northing, zone, hemisphere)` with metres for "
+                "easting/northing.\n"
+                "- The zone is chosen from the longitude; the hemisphere is `'N'`/`'S'`.\n"
+                "- Out-of-range or NULL coordinates produce a NULL struct."
+            ),
+            keywords=(
+                "utm, universal transverse mercator, zone, easting, northing, "
+                "hemisphere, project, metric coordinates, wgs84, grid"
+            ),
+            relative_path=_SRC,
+        )
 
     @classmethod
     def on_bind(cls, params: BindParameters) -> BindResult:
@@ -204,6 +317,44 @@ class ToWebMercatorFunction(ScalarFunction):
                 description="San Francisco in Web Mercator metres",
             ),
         ]
+        tags = object_tags(
+            title="Convert to Web Mercator",
+            doc_llm=(
+                "# to_webmercator\n\n"
+                "Shorthand for the most common reprojection: WGS84 `(lon, lat)` "
+                "(`EPSG:4326`) to **Web Mercator** `(x, y)` metres (`EPSG:3857`), the CRS "
+                "used by web map tiles (Google/OSM/Mapbox slippy maps).\n\n"
+                "**When to use:** to place lon/lat points onto a web map or tile grid, or "
+                "whenever you need the Web Mercator metric coordinate without spelling out "
+                "the EPSG codes.\n\n"
+                "**Inputs:** `lon`, `lat` in WGS84 degrees.\n\n"
+                "**Output:** `STRUCT(x DOUBLE, y DOUBLE)` in Web Mercator metres.\n\n"
+                "**Edge cases:** NULL/non-finite input yields a NULL struct. Web Mercator "
+                "is undefined near the poles (|lat| ~> 85.06 deg), where values grow "
+                "unbounded -- this is a property of the projection, not an error."
+            ),
+            doc_md=(
+                "## to_webmercator(lon, lat)\n\n"
+                "Convenience wrapper for `transform(lon, lat, 'EPSG:4326', 'EPSG:3857')`, "
+                "returning `STRUCT(x, y)` in Web Mercator metres.\n\n"
+                "### Usage\n\n"
+                "```sql\n"
+                "SELECT proj.to_webmercator(-122.4194, 37.7749);\n"
+                "SELECT proj.to_webmercator(lon, lat).x FROM pts;\n"
+                "```\n\n"
+                "### Notes\n\n"
+                "- Equivalent to a `transform` call into `EPSG:3857`, with `always_xy` "
+                "axis order.\n"
+                "- The projection is undefined near the poles; expect very large values "
+                "above ~85.06 degrees latitude.\n"
+                "- NULL or non-finite coordinates produce a NULL struct."
+            ),
+            keywords=(
+                "web mercator, webmercator, 3857, 4326, tiles, slippy map, "
+                "google maps, openstreetmap, project, wgs84 to mercator"
+            ),
+            relative_path=_SRC,
+        )
 
     @classmethod
     def on_bind(cls, params: BindParameters) -> BindResult:
@@ -242,6 +393,39 @@ class FromWebMercatorFunction(ScalarFunction):
                 description="Web Mercator metres back to San Francisco lon/lat",
             ),
         ]
+        tags = object_tags(
+            title="Convert From Web Mercator",
+            doc_llm=(
+                "# from_webmercator\n\n"
+                "Inverse of `to_webmercator`: convert **Web Mercator** `(x, y)` metres "
+                "(`EPSG:3857`) back to WGS84 `(lon, lat)` degrees (`EPSG:4326`).\n\n"
+                "**When to use:** to turn tile/pixel-derived Web Mercator coordinates back "
+                "into geographic lon/lat, e.g. after reading map-tile geometry.\n\n"
+                "**Inputs:** `x` (easting metres), `y` (northing metres).\n\n"
+                "**Output:** `STRUCT(lon DOUBLE, lat DOUBLE)` in WGS84 degrees.\n\n"
+                "**Edge cases:** NULL/non-finite input yields a NULL struct. This pairs "
+                "exactly with `to_webmercator` for a round-trip."
+            ),
+            doc_md=(
+                "## from_webmercator(x, y)\n\n"
+                "Convenience wrapper for `transform(x, y, 'EPSG:3857', 'EPSG:4326')`, "
+                "returning `STRUCT(lon, lat)` in WGS84 degrees.\n\n"
+                "### Usage\n\n"
+                "```sql\n"
+                "SELECT proj.from_webmercator(-13627665.27, 4547675.35);\n"
+                "SELECT proj.from_webmercator(x, y).lat FROM tiles;\n"
+                "```\n\n"
+                "### Notes\n\n"
+                "- Inverse of `to_webmercator`; round-trips back to the original lon/lat "
+                "(within PROJ precision).\n"
+                "- Uses `always_xy` axis order.\n"
+                "- NULL or non-finite coordinates produce a NULL struct."
+            ),
+            keywords=(
+                "web mercator, webmercator, 3857, 4326, inverse, unproject, tiles, mercator to lonlat, lon lat, wgs84"
+            ),
+            relative_path=_SRC,
+        )
 
     @classmethod
     def on_bind(cls, params: BindParameters) -> BindResult:
@@ -285,6 +469,44 @@ class GeodesicDistanceFunction(ScalarFunction):
                 description="New York to London (~5,585,000 m)",
             ),
         ]
+        tags = object_tags(
+            title="Geodesic Distance Between Points",
+            doc_llm=(
+                "# geodesic_distance\n\n"
+                "Compute the **accurate ellipsoidal (WGS84) geodesic distance** in metres "
+                "between two `(lon, lat)` points. Unlike a spherical haversine, this uses "
+                "the WGS84 ellipsoid (via PROJ's `Geod`), so it is correct to the metre "
+                "over global distances.\n\n"
+                "**When to use:** for true great-circle / shortest-path distances on Earth "
+                "-- routing, proximity filters, nearest-neighbour queries -- where accuracy "
+                "matters more than a flat-plane approximation.\n\n"
+                "**Inputs:** `lon1, lat1` (point 1) and `lon2, lat2` (point 2) in degrees.\n\n"
+                "**Output:** distance in metres (DOUBLE).\n\n"
+                "**Edge cases:** any NULL/non-finite or out-of-range coordinate "
+                "(`|lat| > 90` / `|lon| > 180`) yields NULL. The result is ~0.3% different "
+                "from a spherical haversine because it is ellipsoidal."
+            ),
+            doc_md=(
+                "## geodesic_distance(lon1, lat1, lon2, lat2)\n\n"
+                "Accurate WGS84-ellipsoid geodesic distance, in metres, between two "
+                "geographic points.\n\n"
+                "### Usage\n\n"
+                "```sql\n"
+                "SELECT proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074);\n"
+                "SELECT id FROM places\n"
+                " WHERE proj.geodesic_distance(lon, lat, -122.42, 37.77) < 50000;\n"
+                "```\n\n"
+                "### Notes\n\n"
+                "- Ellipsoidal (WGS84), so it differs from spherical haversine by ~0.3%.\n"
+                "- NULL, non-finite, or out-of-range coordinates yield NULL.\n"
+                "- Returns metres regardless of input units (inputs are always degrees)."
+            ),
+            keywords=(
+                "geodesic, distance, great circle, haversine, ellipsoid, wgs84, "
+                "meters, metres, proximity, nearest, how far, geod"
+            ),
+            relative_path=_SRC,
+        )
 
     @classmethod
     def compute(
@@ -318,6 +540,44 @@ class GeodesicBearingFunction(ScalarFunction):
                 description="Initial bearing from New York toward London",
             ),
         ]
+        tags = object_tags(
+            title="Geodesic Initial Bearing",
+            doc_llm=(
+                "# geodesic_bearing\n\n"
+                "Compute the **initial geodesic bearing** (forward azimuth) in degrees "
+                "from point 1 toward point 2 on the WGS84 ellipsoid, normalized to "
+                "`[0, 360)` where 0 = north, 90 = east.\n\n"
+                "**When to use:** to find the compass direction to travel from one "
+                "location to another along the shortest path -- navigation, heading "
+                "indicators, directional filters.\n\n"
+                "**Inputs:** `lon1, lat1` (origin) and `lon2, lat2` (destination) in "
+                "degrees.\n\n"
+                "**Output:** initial forward azimuth in degrees, `[0, 360)` (DOUBLE).\n\n"
+                "**Edge cases:** NULL/non-finite or out-of-range coordinates yield NULL. "
+                "It is the *initial* bearing -- along a geodesic the bearing changes "
+                "continuously, so the arrival bearing differs from this value."
+            ),
+            doc_md=(
+                "## geodesic_bearing(lon1, lat1, lon2, lat2)\n\n"
+                "Initial forward azimuth (compass heading) in degrees `[0, 360)` from "
+                "point 1 toward point 2 on the WGS84 ellipsoid.\n\n"
+                "### Usage\n\n"
+                "```sql\n"
+                "SELECT proj.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074);\n"
+                "SELECT proj.geodesic_bearing(from_lon, from_lat, to_lon, to_lat)\n"
+                " FROM legs;\n"
+                "```\n\n"
+                "### Notes\n\n"
+                "- 0 deg = north, 90 deg = east; result is normalized to `[0, 360)`.\n"
+                "- This is the *initial* bearing; along a geodesic it changes en route.\n"
+                "- NULL, non-finite, or out-of-range coordinates yield NULL."
+            ),
+            keywords=(
+                "bearing, azimuth, heading, direction, compass, geodesic, "
+                "forward azimuth, navigation, which way, degrees, wgs84"
+            ),
+            relative_path=_SRC,
+        )
 
     @classmethod
     def compute(
@@ -356,6 +616,40 @@ class CrsUnitsFunction(ScalarFunction):
                 description="Units of Web Mercator ('metre')",
             ),
         ]
+        tags = object_tags(
+            title="Look Up CRS Axis Units",
+            doc_llm=(
+                "# crs_units\n\n"
+                "Return the **unit name of a CRS's first axis** -- e.g. `'degree'` for a "
+                "geographic CRS like `EPSG:4326`, or `'metre'` for a projected CRS like "
+                "`EPSG:3857`.\n\n"
+                "**When to use:** to discover whether a CRS is angular (degrees) or "
+                "linear (metres/feet) before deciding how to interpret or transform its "
+                "coordinates.\n\n"
+                "**Inputs:** `crs` -- an EPSG code/string (e.g. `'EPSG:3857'`).\n\n"
+                "**Output:** the axis unit name as VARCHAR.\n\n"
+                "**Edge cases:** NULL input yields NULL; an unknown/invalid CRS raises a "
+                "clear query error."
+            ),
+            doc_md=(
+                "## crs_units(crs)\n\n"
+                "Return the unit of measure of a CRS's first axis (e.g. `degree`, "
+                "`metre`).\n\n"
+                "### Usage\n\n"
+                "```sql\n"
+                "SELECT proj.crs_units('EPSG:3857');  -- 'metre'\n"
+                "SELECT proj.crs_units('EPSG:4326');  -- 'degree'\n"
+                "```\n\n"
+                "### Notes\n\n"
+                "- Tells you whether a CRS is angular or linear.\n"
+                "- NULL input yields NULL; an unknown CRS raises a query error."
+            ),
+            keywords=(
+                "crs units, axis units, degree, metre, meter, foot, unit of measure, "
+                "epsg, projection units, angular, linear"
+            ),
+            relative_path=_SRC,
+        )
 
     @classmethod
     def compute(cls, crs: Annotated[pa.StringArray, Param(doc=_CRS_DOC)]) -> Annotated[pa.StringArray, Returns()]:
@@ -379,6 +673,39 @@ class CrsNameFunction(ScalarFunction):
                 description="Name of WGS84 ('WGS 84')",
             ),
         ]
+        tags = object_tags(
+            title="Look Up CRS Display Name",
+            doc_llm=(
+                "# crs_name\n\n"
+                "Return the **human-readable name** of a CRS -- e.g. `'WGS 84'` for "
+                "`EPSG:4326` or `'WGS 84 / Pseudo-Mercator'` for `EPSG:3857`.\n\n"
+                "**When to use:** to label, audit, or display CRS codes in a "
+                "user-friendly way, or to confirm that a code resolves to the CRS you "
+                "expect.\n\n"
+                "**Inputs:** `crs` -- an EPSG code/string (e.g. `'EPSG:4326'`).\n\n"
+                "**Output:** the CRS name as VARCHAR.\n\n"
+                "**Edge cases:** NULL input yields NULL; an unknown/invalid CRS raises a "
+                "clear query error."
+            ),
+            doc_md=(
+                "## crs_name(crs)\n\n"
+                "Return the official human-readable name of a coordinate reference "
+                "system.\n\n"
+                "### Usage\n\n"
+                "```sql\n"
+                "SELECT proj.crs_name('EPSG:4326');  -- 'WGS 84'\n"
+                "SELECT proj.crs_name('EPSG:3857');  -- 'WGS 84 / Pseudo-Mercator'\n"
+                "```\n\n"
+                "### Notes\n\n"
+                "- Useful for labelling CRS codes in reports and UIs.\n"
+                "- NULL input yields NULL; an unknown CRS raises a query error."
+            ),
+            keywords=(
+                "crs name, projection name, epsg name, wgs 84, describe crs, "
+                "lookup crs, identify projection, coordinate system name"
+            ),
+            relative_path=_SRC,
+        )
 
     @classmethod
     def compute(cls, crs: Annotated[pa.StringArray, Param(doc=_CRS_DOC)]) -> Annotated[pa.StringArray, Returns()]:
@@ -401,6 +728,41 @@ class ProjVersionFunction(ScalarFunction):
                 description="PROJ library version",
             ),
         ]
+        tags = object_tags(
+            title="Bundled PROJ Library Version",
+            doc_llm=(
+                "# proj_version\n\n"
+                "Return the version string of the **PROJ** C library bundled inside the "
+                "`pyproj` wheel that powers every transform in this worker (a zero-argument "
+                "scalar).\n\n"
+                "**When to use:** for diagnostics and reproducibility -- to record which "
+                "PROJ release produced a set of transformed coordinates, or to confirm the "
+                "library is present and bundled (no separate native install).\n\n"
+                "**Inputs:** none.\n\n"
+                "**Output:** the PROJ version string (e.g. `'9.4.0'`) as VARCHAR, repeated "
+                "once per output row.\n\n"
+                "**Edge cases:** none -- it always returns a value; it never depends on "
+                "input data or a network."
+            ),
+            doc_md=(
+                "## proj_version()\n\n"
+                "Return the version of the bundled PROJ library (zero-argument scalar).\n\n"
+                "### Usage\n\n"
+                "```sql\n"
+                "SELECT proj.proj_version();  -- e.g. '9.4.0'\n"
+                "```\n\n"
+                "### Notes\n\n"
+                "- PROJ and its data grids are bundled in the `pyproj` wheel, so this "
+                "confirms the bundling and reports the exact release.\n"
+                "- Useful for provenance: which PROJ produced these coordinates.\n"
+                "- Takes no arguments and never returns NULL."
+            ),
+            keywords=(
+                "proj version, proj library, pyproj, version, diagnostics, "
+                "provenance, build info, library version, about"
+            ),
+            relative_path=_SRC,
+        )
 
     @classmethod
     def compute(
