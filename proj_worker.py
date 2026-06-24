@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "vgi-python[http]>=0.8.3",
+#     "vgi-python[http]>=0.8.4",
 #     "pyproj>=3.6",
 #     "pyarrow",
 # ]
@@ -46,13 +46,57 @@ from vgi.catalog import Catalog, Schema
 from vgi_proj import projection
 from vgi_proj.scalars import SCALAR_FUNCTIONS
 
+_REPO_URL = "https://github.com/Query-farm/vgi-proj"
+
+_CATALOG_TAGS = {
+    "vgi.description_llm": (
+        "Coordinate-reference-system (CRS) transforms and accurate ellipsoidal (WGS84) geodesic "
+        "geometry for SQL, backed by pyproj/PROJ. Transform (x, y) between any two CRSs by EPSG "
+        "code (e.g. EPSG:4326 WGS84 lon/lat to EPSG:3857 Web Mercator), project a WGS84 point into "
+        "its auto-selected UTM zone, convert to/from Web Mercator, compute geodesic distance "
+        "(metres) and initial bearing (degrees) between two lon/lat points, and look up a CRS's "
+        "human-readable name and axis units. Use for reprojection, mapping, and great-circle "
+        "distance/bearing in SQL. All transforms use always_xy axis order (x/easting/longitude, "
+        "y/northing/latitude)."
+    ),
+    "vgi.description_md": (
+        "# proj\n\n"
+        "CRS transforms and accurate WGS84 geodesic distance/bearing over Apache Arrow, via "
+        "pyproj/PROJ (PROJ and its data grids are bundled in the pyproj wheel).\n\n"
+        "Scalars: `transform`, `to_utm`, `to_webmercator`, `from_webmercator`, "
+        "`geodesic_distance`, `geodesic_bearing`, `crs_name`, `crs_units`, `proj_version`.\n\n"
+        "All transforms use `always_xy=True`, so inputs/outputs are "
+        "`(x/easting/longitude, y/northing/latitude)` regardless of the CRS's declared axis order."
+    ),
+    "vgi.author": "Query.Farm",
+    "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
+    "vgi.license": "MIT",
+    "vgi.support_contact": f"{_REPO_URL}/issues",
+    "vgi.support_policy_url": f"{_REPO_URL}/blob/main/README.md",
+}
+
+_MAIN_SCHEMA_TAGS = {
+    "vgi.description_llm": (
+        "CRS transform and geodesic functions: transform (x, y) between CRSs by EPSG code, project "
+        "WGS84 lon/lat into UTM, convert to/from Web Mercator, compute ellipsoidal geodesic "
+        "distance (metres) and bearing (degrees) between two points, and look up a CRS's name and "
+        "axis units. All coordinate I/O uses always_xy order (x/easting/longitude, "
+        "y/northing/latitude)."
+    ),
+    "vgi.description_md": ("CRS transform and WGS84 geodesic functions over Apache Arrow (pyproj/PROJ)."),
+}
+
 _PROJ_CATALOG = Catalog(
     name="proj",
     default_schema="main",
+    comment="CRS transforms (always_xy) + WGS84 geodesic distance/bearing via pyproj/PROJ.",
+    tags=_CATALOG_TAGS,
+    source_url=_REPO_URL,
     schemas=[
         Schema(
             name="main",
             comment="CRS transforms (always_xy) + WGS84 geodesic distance/bearing via pyproj/PROJ",
+            tags=_MAIN_SCHEMA_TAGS,
             functions=list(SCALAR_FUNCTIONS),
         ),
     ],
