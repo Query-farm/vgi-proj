@@ -47,8 +47,6 @@ from . import projection
 from .meta import object_tags
 from .schema_utils import field
 
-_SRC = "vgi_proj/scalars.py"
-
 # VGI509: at least one object ships guaranteed-runnable, catalog-qualified
 # examples. Each ``sql`` is self-contained and re-runnable against an attached
 # ``proj`` worker; ``expected_result`` is deliberately omitted (the linter only
@@ -167,11 +165,20 @@ class TransformFunction(ScalarFunction):
                     "- NULL or non-finite coordinates produce a NULL struct.\n"
                     "- An unknown CRS raises a DuckDB query error rather than crashing."
                 ),
-                keywords=(
-                    "transform, reproject, projection, coordinate transform, crs, epsg, "
-                    "wgs84, web mercator, 4326, 3857, convert coordinates, map projection"
-                ),
-                relative_path=_SRC,
+                keywords=[
+                    "transform",
+                    "reproject",
+                    "projection",
+                    "coordinate transform",
+                    "crs",
+                    "epsg",
+                    "wgs84",
+                    "web mercator",
+                    "4326",
+                    "3857",
+                    "convert coordinates",
+                    "map projection",
+                ],
             ),
             "vgi.executable_examples": _EXECUTABLE_EXAMPLES,
         }
@@ -259,11 +266,18 @@ class ToUtmFunction(ScalarFunction):
                 "- The zone is chosen from the longitude; the hemisphere is `'N'`/`'S'`.\n"
                 "- Out-of-range or NULL coordinates produce a NULL struct."
             ),
-            keywords=(
-                "utm, universal transverse mercator, zone, easting, northing, "
-                "hemisphere, project, metric coordinates, wgs84, grid"
-            ),
-            relative_path=_SRC,
+            keywords=[
+                "utm",
+                "universal transverse mercator",
+                "zone",
+                "easting",
+                "northing",
+                "hemisphere",
+                "project",
+                "metric coordinates",
+                "wgs84",
+                "grid",
+            ],
         )
 
     @classmethod
@@ -349,11 +363,18 @@ class ToWebMercatorFunction(ScalarFunction):
                 "above ~85.06 degrees latitude.\n"
                 "- NULL or non-finite coordinates produce a NULL struct."
             ),
-            keywords=(
-                "web mercator, webmercator, 3857, 4326, tiles, slippy map, "
-                "google maps, openstreetmap, project, wgs84 to mercator"
-            ),
-            relative_path=_SRC,
+            keywords=[
+                "web mercator",
+                "webmercator",
+                "3857",
+                "4326",
+                "tiles",
+                "slippy map",
+                "google maps",
+                "openstreetmap",
+                "project",
+                "wgs84 to mercator",
+            ],
         )
 
     @classmethod
@@ -421,10 +442,18 @@ class FromWebMercatorFunction(ScalarFunction):
                 "- Uses `always_xy` axis order.\n"
                 "- NULL or non-finite coordinates produce a NULL struct."
             ),
-            keywords=(
-                "web mercator, webmercator, 3857, 4326, inverse, unproject, tiles, mercator to lonlat, lon lat, wgs84"
-            ),
-            relative_path=_SRC,
+            keywords=[
+                "web mercator",
+                "webmercator",
+                "3857",
+                "4326",
+                "inverse",
+                "unproject",
+                "tiles",
+                "mercator to lonlat",
+                "lon lat",
+                "wgs84",
+            ],
         )
 
     @classmethod
@@ -501,11 +530,20 @@ class GeodesicDistanceFunction(ScalarFunction):
                 "- NULL, non-finite, or out-of-range coordinates yield NULL.\n"
                 "- Returns metres regardless of input units (inputs are always degrees)."
             ),
-            keywords=(
-                "geodesic, distance, great circle, haversine, ellipsoid, wgs84, "
-                "meters, metres, proximity, nearest, how far, geod"
-            ),
-            relative_path=_SRC,
+            keywords=[
+                "geodesic",
+                "distance",
+                "great circle",
+                "haversine",
+                "ellipsoid",
+                "wgs84",
+                "meters",
+                "metres",
+                "proximity",
+                "nearest",
+                "how far",
+                "geod",
+            ],
         )
 
     @classmethod
@@ -572,11 +610,19 @@ class GeodesicBearingFunction(ScalarFunction):
                 "- This is the *initial* bearing; along a geodesic it changes en route.\n"
                 "- NULL, non-finite, or out-of-range coordinates yield NULL."
             ),
-            keywords=(
-                "bearing, azimuth, heading, direction, compass, geodesic, "
-                "forward azimuth, navigation, which way, degrees, wgs84"
-            ),
-            relative_path=_SRC,
+            keywords=[
+                "bearing",
+                "azimuth",
+                "heading",
+                "direction",
+                "compass",
+                "geodesic",
+                "forward azimuth",
+                "navigation",
+                "which way",
+                "degrees",
+                "wgs84",
+            ],
         )
 
     @classmethod
@@ -644,11 +690,19 @@ class CrsUnitsFunction(ScalarFunction):
                 "- Tells you whether a CRS is angular or linear.\n"
                 "- NULL input yields NULL; an unknown CRS raises a query error."
             ),
-            keywords=(
-                "crs units, axis units, degree, metre, meter, foot, unit of measure, "
-                "epsg, projection units, angular, linear"
-            ),
-            relative_path=_SRC,
+            keywords=[
+                "crs units",
+                "axis units",
+                "degree",
+                "metre",
+                "meter",
+                "foot",
+                "unit of measure",
+                "epsg",
+                "projection units",
+                "angular",
+                "linear",
+            ],
         )
 
     @classmethod
@@ -700,11 +754,16 @@ class CrsNameFunction(ScalarFunction):
                 "- Useful for labelling CRS codes in reports and UIs.\n"
                 "- NULL input yields NULL; an unknown CRS raises a query error."
             ),
-            keywords=(
-                "crs name, projection name, epsg name, wgs 84, describe crs, "
-                "lookup crs, identify projection, coordinate system name"
-            ),
-            relative_path=_SRC,
+            keywords=[
+                "crs name",
+                "projection name",
+                "epsg name",
+                "wgs 84",
+                "describe crs",
+                "lookup crs",
+                "identify projection",
+                "coordinate system name",
+            ],
         )
 
     @classmethod
@@ -757,11 +816,17 @@ class ProjVersionFunction(ScalarFunction):
                 "- Useful for provenance: which PROJ produced these coordinates.\n"
                 "- Takes no arguments and never returns NULL."
             ),
-            keywords=(
-                "proj version, proj library, pyproj, version, diagnostics, "
-                "provenance, build info, library version, about"
-            ),
-            relative_path=_SRC,
+            keywords=[
+                "proj version",
+                "proj library",
+                "pyproj",
+                "version",
+                "diagnostics",
+                "provenance",
+                "build info",
+                "library version",
+                "about",
+            ],
         )
 
     @classmethod

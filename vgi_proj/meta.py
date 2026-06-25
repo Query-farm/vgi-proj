@@ -1,7 +1,7 @@
 """Shared per-object discovery/description metadata for the proj worker.
 
-The ``vgi-lint`` strict profile (0.26.0) expects these tags on **every**
-function (and table, though this worker has none):
+The ``vgi-lint`` strict profile expects these tags on **every** function (and
+table, though this worker has none):
 
 - ``vgi.title`` (VGI124) -- a human-friendly display name. It must NOT
   normalize-equal the machine name (lowercase + strip non-alphanumerics), or
@@ -10,27 +10,27 @@ function (and table, though this worker has none):
   audience: what it does, when to use it, inputs/outputs, edge cases.
 - ``vgi.doc_md`` (VGI113) -- a Markdown narrative for human docs (overview +
   usage + notes). Distinct content from ``doc_llm``.
-- ``vgi.keywords`` (VGI126) -- comma-separated search terms/synonyms.
-- ``vgi.source_url`` (VGI128) -- link to the implementing source file.
+- ``vgi.keywords`` (VGI126/VGI138) -- search terms/synonyms, serialized as a
+  **JSON array of strings** (not a comma-separated string).
 
-``source_url`` builds the canonical GitHub blob URL so every object points at
-exactly where it is implemented.
+``vgi.source_url`` (VGI139) belongs only on the catalog object, so it is set
+once on the catalog and intentionally NOT repeated on every function/schema.
 """
 
 from __future__ import annotations
 
+import json
+
 REPO_URL = "https://github.com/Query-farm/vgi-proj"
 
-# Base GitHub blob URL for source files in this repo (pinned to ``main``).
-_SOURCE_BASE = f"{REPO_URL}/blob/main"
 
+def keywords_json(keywords: list[str]) -> str:
+    """Serialize keywords as a JSON array of strings for ``vgi.keywords``.
 
-def source_url(relative_path: str) -> str:
-    """Build the implementation ``vgi.source_url`` for a repo-relative path.
-
-    Example: ``source_url("vgi_proj/scalars.py")``.
+    VGI138 requires ``vgi.keywords`` to be a JSON array (e.g. ``["a","b"]``),
+    not a comma-separated string.
     """
-    return f"{_SOURCE_BASE}/{relative_path}"
+    return json.dumps(keywords)
 
 
 def object_tags(
@@ -38,17 +38,17 @@ def object_tags(
     title: str,
     doc_llm: str,
     doc_md: str,
-    keywords: str,
-    relative_path: str,
+    keywords: list[str],
 ) -> dict[str, str]:
-    """Build the five standard per-object discovery/description tags.
+    """Build the standard per-object discovery/description tags.
 
-    ``relative_path`` is the implementing file relative to the repo root.
+    ``keywords`` is a list of search terms/synonyms, serialized to a JSON array
+    for ``vgi.keywords`` (VGI138). ``vgi.source_url`` is intentionally omitted
+    here -- it belongs only on the catalog (VGI139).
     """
     return {
         "vgi.title": title,
         "vgi.doc_llm": doc_llm,
         "vgi.doc_md": doc_md,
-        "vgi.keywords": keywords,
-        "vgi.source_url": source_url(relative_path),
+        "vgi.keywords": keywords_json(keywords),
     }

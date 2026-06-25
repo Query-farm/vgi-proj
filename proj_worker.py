@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "vgi-python[http]>=0.8.4",
+#     "vgi-python[http]>=0.8.5",
 #     "pyproj>=3.6",
 #     "pyarrow",
 # ]
@@ -44,16 +44,35 @@ from vgi import Worker
 from vgi.catalog import Catalog, Schema
 
 from vgi_proj import projection
+from vgi_proj.meta import keywords_json
 from vgi_proj.scalars import SCALAR_FUNCTIONS
 
 _REPO_URL = "https://github.com/Query-farm/vgi-proj"
 
 _CATALOG_TAGS = {
     "vgi.title": "CRS Transforms & Geodesic Geometry",
-    "vgi.keywords": (
-        "proj, pyproj, crs, coordinate reference system, epsg, transform, reproject, "
-        "projection, wgs84, web mercator, utm, geodesic, distance, bearing, azimuth, "
-        "gis, mapping, longitude, latitude"
+    "vgi.keywords": keywords_json(
+        [
+            "proj",
+            "pyproj",
+            "crs",
+            "coordinate reference system",
+            "epsg",
+            "transform",
+            "reproject",
+            "projection",
+            "wgs84",
+            "web mercator",
+            "utm",
+            "geodesic",
+            "distance",
+            "bearing",
+            "azimuth",
+            "gis",
+            "mapping",
+            "longitude",
+            "latitude",
+        ]
     ),
     "vgi.doc_llm": (
         "Coordinate-reference-system (CRS) transforms and accurate ellipsoidal (WGS84) geodesic "
@@ -83,16 +102,32 @@ _CATALOG_TAGS = {
 
 _MAIN_SCHEMA_TAGS = {
     "vgi.title": "Proj Transforms & Geodesics",
-    "vgi.keywords": (
-        "transform, to_utm, to_webmercator, from_webmercator, geodesic_distance, "
-        "geodesic_bearing, crs_name, crs_units, proj_version, crs, epsg, projection, "
-        "reproject, wgs84, web mercator, utm, geodesic"
+    "vgi.keywords": keywords_json(
+        [
+            "transform",
+            "to_utm",
+            "to_webmercator",
+            "from_webmercator",
+            "geodesic_distance",
+            "geodesic_bearing",
+            "crs_name",
+            "crs_units",
+            "proj_version",
+            "crs",
+            "epsg",
+            "projection",
+            "reproject",
+            "wgs84",
+            "web mercator",
+            "utm",
+            "geodesic",
+        ]
     ),
     # VGI123 classifying tags use BARE keys (NOT vgi.-namespaced).
     "domain": "geospatial",
     "category": "projection",
     "topic": "coordinate-reference-systems",
-    "vgi.source_url": f"{_REPO_URL}/blob/main/vgi_proj/scalars.py",
+    # VGI139: vgi.source_url belongs only on the catalog, not on each object.
     "vgi.doc_llm": (
         "CRS transform and geodesic functions: transform (x, y) between CRSs by EPSG code, project "
         "WGS84 lon/lat into UTM, convert to/from Web Mercator, compute ellipsoidal geodesic "
@@ -100,7 +135,24 @@ _MAIN_SCHEMA_TAGS = {
         "axis units. All coordinate I/O uses always_xy order (x/easting/longitude, "
         "y/northing/latitude)."
     ),
-    "vgi.doc_md": ("CRS transform and WGS84 geodesic functions over Apache Arrow (pyproj/PROJ)."),
+    "vgi.doc_md": (
+        "# main\n\n"
+        "Coordinate-reference-system (CRS) transform and WGS84 geodesic functions, served "
+        "over Apache Arrow and backed by pyproj/PROJ (PROJ and its data grids are bundled "
+        "in the pyproj wheel, so there is no separate native install).\n\n"
+        "## Functions\n\n"
+        "- `transform`, `to_utm`, `to_webmercator`, `from_webmercator` -- reproject "
+        "coordinates between CRSs by EPSG code, returning STRUCT outputs.\n"
+        "- `geodesic_distance`, `geodesic_bearing` -- accurate ellipsoidal (WGS84) "
+        "distance in metres and initial bearing in degrees between two lon/lat points.\n"
+        "- `crs_name`, `crs_units`, `proj_version` -- CRS metadata lookups and the bundled "
+        "PROJ version.\n\n"
+        "## Conventions\n\n"
+        "All coordinate I/O uses `always_xy` axis order "
+        "`(x/easting/longitude, y/northing/latitude)` regardless of the CRS's declared "
+        "native axis order. NULL/non-finite (and, where applicable, out-of-range) "
+        "coordinates yield NULL; an unknown CRS raises a clear query error."
+    ),
     # VGI506 representative example queries for the schema (catalog-qualified SQL).
     "vgi.example_queries": (
         "SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857');\n"
