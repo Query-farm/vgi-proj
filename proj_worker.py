@@ -86,6 +86,7 @@ _CATALOG_TAGS = {
     ),
     "vgi.doc_md": (
         "# Coordinate Reference System Transforms & Geodesic Distance in SQL\n\n"
+        "![PROJ logo](https://raw.githubusercontent.com/OSGeo/PROJ/master/docs/images/logo.png)\n\n"
         "**Reproject coordinates between any two CRSs and measure accurate ellipsoidal "
         "distance and bearing directly in DuckDB SQL** -- EPSG transforms, UTM and Web "
         "Mercator projection, and WGS84 geodesic geometry, powered by "
