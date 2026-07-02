@@ -39,16 +39,20 @@ def object_tags(
     doc_llm: str,
     doc_md: str,
     keywords: list[str],
+    category: str,
 ) -> dict[str, str]:
     """Build the standard per-object discovery/description tags.
 
     ``keywords`` is a list of search terms/synonyms, serialized to a JSON array
-    for ``vgi.keywords`` (VGI138). ``vgi.source_url`` is intentionally omitted
-    here -- it belongs only on the catalog (VGI139).
+    for ``vgi.keywords`` (VGI138). ``category`` names one of the schema's
+    ``vgi.categories`` entries (VGI410/VGI413), emitted as ``vgi.category`` so
+    the object slots into the schema's navigation registry. ``vgi.source_url``
+    is intentionally omitted here -- it belongs only on the catalog (VGI139).
     """
     return {
         "vgi.title": title,
         "vgi.doc_llm": doc_llm,
         "vgi.doc_md": doc_md,
         "vgi.keywords": keywords_json(keywords),
+        "vgi.category": category,
     }

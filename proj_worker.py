@@ -38,6 +38,7 @@ Usage:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from vgi import Worker
@@ -48,6 +49,105 @@ from vgi_proj.meta import keywords_json
 from vgi_proj.scalars import SCALAR_FUNCTIONS
 
 _REPO_URL = "https://github.com/Query-farm/vgi-proj"
+
+# VGI413/VGI410: an ordered navigation registry for the `main` schema. Each entry
+# is {"name","description"}; every function declares a matching `vgi.category`
+# (see vgi_proj.meta.object_tags), so the schema's objects group into these
+# sections for listing/SEO/navigation.
+_SCHEMA_CATEGORIES = json.dumps(
+    [
+        {
+            "name": "transform",
+            "description": "General coordinate reprojection between any two CRSs identified by EPSG code.",
+        },
+        {
+            "name": "webmercator",
+            "description": "Conversions to and from the Web Mercator (EPSG:3857) web-map tile projection.",
+        },
+        {
+            "name": "utm",
+            "description": "Projection of a WGS84 lon/lat point into its automatically selected UTM zone.",
+        },
+        {
+            "name": "geodesic",
+            "description": "Accurate WGS84-ellipsoid geodesic distance (metres) and initial bearing (degrees).",
+        },
+        {
+            "name": "crs",
+            "description": "CRS metadata lookups (name, axis units) and the bundled PROJ library version.",
+        },
+    ]
+)
+
+# VGI152/VGI920: a fixed agent-suitability suite. Each task's `prompt` is the only
+# text the analyst LLM sees; `reference_sql` is the grader-only canonical answer.
+# All references are deterministic (stable strings, integer zones, or rounded
+# metres/degrees/coordinates) and `ignore_column_names` is set so grading matches
+# on values regardless of how the analyst aliases its output column.
+_AGENT_TEST_TASKS = json.dumps(
+    [
+        {
+            "name": "crs_display_name",
+            "prompt": (
+                "What is the official human-readable name of the coordinate reference "
+                "system identified by EPSG code 4326?"
+            ),
+            "reference_sql": "SELECT proj.main.crs_name('EPSG:4326')",
+            "success_criteria": "Answers 'WGS 84', the display name of EPSG:4326.",
+            "ignore_column_names": True,
+        },
+        {
+            "name": "crs_axis_units",
+            "prompt": ("What are the linear axis units of the Web Mercator coordinate reference system, EPSG:3857?"),
+            "reference_sql": "SELECT proj.main.crs_units('EPSG:3857')",
+            "success_criteria": "Answers 'metre' (the axis unit of EPSG:3857).",
+            "ignore_column_names": True,
+        },
+        {
+            "name": "utm_zone_for_point",
+            "prompt": (
+                "Which UTM zone number contains the WGS84 location at longitude -122.42, "
+                "latitude 37.77? Return just the zone number."
+            ),
+            "reference_sql": "SELECT proj.main.to_utm(-122.42, 37.77).zone",
+            "success_criteria": "Answers 10 (the UTM zone for that longitude).",
+            "ignore_column_names": True,
+        },
+        {
+            "name": "geodesic_distance_km",
+            "prompt": (
+                "Using the accurate WGS84 ellipsoid, what is the geodesic distance in whole "
+                "kilometres (rounded to the nearest kilometre) between New York at longitude "
+                "-74.006, latitude 40.7128 and London at longitude -0.1276, latitude 51.5074?"
+            ),
+            "reference_sql": ("SELECT round(proj.main.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074) / 1000)"),
+            "success_criteria": "Answers about 5585 kilometres.",
+            "ignore_column_names": True,
+        },
+        {
+            "name": "geodesic_bearing_deg",
+            "prompt": (
+                "What is the initial geodesic bearing in whole degrees (rounded to the "
+                "nearest degree) from New York at longitude -74.006, latitude 40.7128 toward "
+                "London at longitude -0.1276, latitude 51.5074?"
+            ),
+            "reference_sql": ("SELECT round(proj.main.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074))"),
+            "success_criteria": "Answers about 51 degrees (initial forward azimuth).",
+            "ignore_column_names": True,
+        },
+        {
+            "name": "to_web_mercator_x",
+            "prompt": (
+                "Convert the WGS84 point at longitude -122.4194, latitude 37.7749 into Web "
+                "Mercator (EPSG:3857) and give its x coordinate in metres, rounded to the "
+                "nearest metre."
+            ),
+            "reference_sql": "SELECT round(proj.main.to_webmercator(-122.4194, 37.7749).x)",
+            "success_criteria": "Answers about -13627665 metres for the x coordinate.",
+            "ignore_column_names": True,
+        },
+    ]
+)
 
 _CATALOG_TAGS = {
     "vgi.title": "CRS Transforms & Geodesic Geometry",
@@ -111,24 +211,26 @@ _CATALOG_TAGS = {
         "transforms fast. All coordinate input and output uses `always_xy` axis order "
         "`(x/easting/longitude, y/northing/latitude)` regardless of a CRS's declared native "
         "axis order, eliminating the classic lon/lat swap.\n\n"
-        "## Functions\n\n"
-        "Use `transform(x, y, from_crs, to_crs)` to reproject a point between any two "
-        "EPSG-coded CRSs, `to_utm(lon, lat)` to project a WGS84 point into its automatically "
-        "selected UTM zone, and `to_webmercator` / `from_webmercator` to convert between "
-        "WGS84 and Web Mercator tile coordinates -- each returning a typed STRUCT. For "
-        "geometry on the ellipsoid, `geodesic_distance(lon1, lat1, lon2, lat2)` returns the "
-        "accurate WGS84 distance in metres and `geodesic_bearing(...)` returns the initial "
-        "bearing in degrees between two longitude/latitude points. Finally, "
-        "`crs_name(crs)` and `crs_units(crs)` look up a CRS's human-readable name and axis "
-        "units, and `proj_version()` reports the bundled PROJ version. NULL or non-finite "
-        "(and, where applicable, out-of-range) coordinates yield NULL, while an unknown CRS "
-        "raises a clear query error."
+        "## Capabilities\n\n"
+        "The worker's functions fall into a few capability areas: general CRS-to-CRS "
+        "reprojection identified by EPSG code; convenience conversions to and from the Web "
+        "Mercator tile projection and into a point's automatically selected UTM zone; "
+        "accurate WGS84-ellipsoid geodesic distance and initial bearing between two "
+        "longitude/latitude points; and lookups of a CRS's human-readable name and axis "
+        "units alongside the bundled PROJ library version. Reprojection results come back "
+        "as typed STRUCT coordinates, while the geodesic and metadata functions return "
+        "plain metres, degrees, or strings. List the schema to discover the exact functions "
+        "and their signatures.\n\n"
+        "NULL or non-finite (and, where applicable, out-of-range) coordinates yield NULL, "
+        "while an unknown CRS raises a clear query error."
     ),
     "vgi.author": "Query.Farm",
     "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
     "vgi.license": "MIT",
     "vgi.support_contact": f"{_REPO_URL}/issues",
     "vgi.support_policy_url": f"{_REPO_URL}/blob/main/README.md",
+    # VGI152/VGI920: fixed agent-suitability task suite (see _AGENT_TEST_TASKS).
+    "vgi.agent_test_tasks": _AGENT_TEST_TASKS,
 }
 
 _MAIN_SCHEMA_TAGS = {
@@ -159,6 +261,8 @@ _MAIN_SCHEMA_TAGS = {
     "category": "projection",
     "topic": "coordinate-reference-systems",
     # VGI139: vgi.source_url belongs only on the catalog, not on each object.
+    # VGI413/VGI410: ordered category registry; each function names one via vgi.category.
+    "vgi.categories": _SCHEMA_CATEGORIES,
     "vgi.doc_llm": (
         "CRS transform and geodesic functions: transform (x, y) between CRSs by EPSG code, project "
         "WGS84 lon/lat into UTM, convert to/from Web Mercator, compute ellipsoidal geodesic "
@@ -171,13 +275,14 @@ _MAIN_SCHEMA_TAGS = {
         "Coordinate-reference-system (CRS) transform and WGS84 geodesic functions, served "
         "over Apache Arrow and backed by pyproj/PROJ (PROJ and its data grids are bundled "
         "in the pyproj wheel, so there is no separate native install).\n\n"
-        "## Functions\n\n"
-        "- `transform`, `to_utm`, `to_webmercator`, `from_webmercator` -- reproject "
-        "coordinates between CRSs by EPSG code, returning STRUCT outputs.\n"
-        "- `geodesic_distance`, `geodesic_bearing` -- accurate ellipsoidal (WGS84) "
-        "distance in metres and initial bearing in degrees between two lon/lat points.\n"
-        "- `crs_name`, `crs_units`, `proj_version` -- CRS metadata lookups and the bundled "
-        "PROJ version.\n\n"
+        "## Capabilities\n\n"
+        "Reproject coordinates between CRSs identified by EPSG code -- including shorthands "
+        "for the Web Mercator tile projection and a point's auto-selected UTM zone -- "
+        "returning typed STRUCT outputs. Measure accurate ellipsoidal (WGS84) geodesic "
+        "distance in metres and initial bearing in degrees between two longitude/latitude "
+        "points. Look up CRS metadata such as a system's display name and axis units, plus "
+        "the bundled PROJ library version. List the schema to see each function and its "
+        "signature.\n\n"
         "## Conventions\n\n"
         "All coordinate I/O uses `always_xy` axis order "
         "`(x/easting/longitude, y/northing/latitude)` regardless of the CRS's declared "

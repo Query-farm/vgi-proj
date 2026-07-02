@@ -132,6 +132,7 @@ class TransformFunction(ScalarFunction):
         tags = {
             **object_tags(
                 title="Transform Coordinates Between CRSs",
+                category="transform",
                 doc_llm=(
                     "# transform\n\n"
                     "Reproject a single `(x, y)` coordinate pair from one coordinate "
@@ -236,6 +237,7 @@ class ToUtmFunction(ScalarFunction):
         ]
         tags = object_tags(
             title="Project to UTM Zone",
+            category="utm",
             doc_llm=(
                 "# to_utm\n\n"
                 "Project a WGS84 `(lon, lat)` point into its **auto-selected** Universal "
@@ -333,6 +335,7 @@ class ToWebMercatorFunction(ScalarFunction):
         ]
         tags = object_tags(
             title="Convert to Web Mercator",
+            category="webmercator",
             doc_llm=(
                 "# to_webmercator\n\n"
                 "Shorthand for the most common reprojection: WGS84 `(lon, lat)` "
@@ -416,6 +419,7 @@ class FromWebMercatorFunction(ScalarFunction):
         ]
         tags = object_tags(
             title="Convert From Web Mercator",
+            category="webmercator",
             doc_llm=(
                 "# from_webmercator\n\n"
                 "Inverse of `to_webmercator`: convert **Web Mercator** `(x, y)` metres "
@@ -500,6 +504,7 @@ class GeodesicDistanceFunction(ScalarFunction):
         ]
         tags = object_tags(
             title="Geodesic Distance Between Points",
+            category="geodesic",
             doc_llm=(
                 "# geodesic_distance\n\n"
                 "Compute the **accurate ellipsoidal (WGS84) geodesic distance** in metres "
@@ -580,6 +585,7 @@ class GeodesicBearingFunction(ScalarFunction):
         ]
         tags = object_tags(
             title="Geodesic Initial Bearing",
+            category="geodesic",
             doc_llm=(
                 "# geodesic_bearing\n\n"
                 "Compute the **initial geodesic bearing** (forward azimuth) in degrees "
@@ -664,6 +670,7 @@ class CrsUnitsFunction(ScalarFunction):
         ]
         tags = object_tags(
             title="Look Up CRS Axis Units",
+            category="crs",
             doc_llm=(
                 "# crs_units\n\n"
                 "Return the **unit name of a CRS's first axis** -- e.g. `'degree'` for a "
@@ -729,6 +736,7 @@ class CrsNameFunction(ScalarFunction):
         ]
         tags = object_tags(
             title="Look Up CRS Display Name",
+            category="crs",
             doc_llm=(
                 "# crs_name\n\n"
                 "Return the **human-readable name** of a CRS -- e.g. `'WGS 84'` for "
@@ -789,6 +797,7 @@ class ProjVersionFunction(ScalarFunction):
         ]
         tags = object_tags(
             title="Bundled PROJ Library Version",
+            category="crs",
             doc_llm=(
                 "# proj_version\n\n"
                 "Return the version string of the **PROJ** C library bundled inside the "
