@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "vgi-python[http]>=0.9.0",
+#     "vgi-python[http]>=0.15.0",
 #     "pyproj>=3.6",
 #     "pyarrow",
 # ]
@@ -144,6 +144,41 @@ _AGENT_TEST_TASKS = json.dumps(
             ),
             "reference_sql": "SELECT round(proj.main.to_webmercator(-122.4194, 37.7749).x)",
             "success_criteria": "Answers about -13627665 metres for the x coordinate.",
+            "ignore_column_names": True,
+        },
+        {
+            # transform returns STRUCT(x, y) floats; ask for the rounded x value (the form
+            # the analyst returns directly), mirroring the passing to_web_mercator_x task.
+            "name": "transform_to_web_mercator_x",
+            "prompt": (
+                "Transform the WGS84 point at longitude -122.42, latitude 37.77 from EPSG:4326 "
+                "into Web Mercator (EPSG:3857), and give its x coordinate in metres, rounded to "
+                "the nearest metre."
+            ),
+            "reference_sql": "SELECT round(proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857').x)",
+            "success_criteria": "Answers about -13627732 metres for the x coordinate.",
+            "ignore_column_names": True,
+        },
+        {
+            # from_webmercator returns STRUCT(lon, lat) floats; ask for the recovered longitude
+            # rounded to 2 decimals so the analyst's direct value matches the reference.
+            "name": "from_web_mercator_longitude",
+            "prompt": (
+                "Convert the Web Mercator point x = -13627665.27, y = 4547675.35 (EPSG:3857) back "
+                "to WGS84, and give the recovered longitude in degrees, rounded to 2 decimal "
+                "places."
+            ),
+            "reference_sql": "SELECT round(proj.main.from_webmercator(-13627665.27, 4547675.35).lon, 2)",
+            "success_criteria": "Answers -122.42 (the recovered longitude).",
+            "ignore_column_names": True,
+        },
+        {
+            # proj_version returns the bundled PROJ version string. The reference_sql runs live
+            # against the same worker, so an exact compare is stable (both sides see one build).
+            "name": "proj_library_version",
+            "prompt": ("What version string does this worker report for the bundled PROJ library?"),
+            "reference_sql": "SELECT proj.main.proj_version()",
+            "success_criteria": "Answers the bundled PROJ version string (e.g. '9.5.1').",
             "ignore_column_names": True,
         },
     ]
