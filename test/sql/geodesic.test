@@ -63,12 +63,6 @@ SELECT proj.crs_units('EPSG:4326');
 ----
 degree
 
-# PROJ version looks like a dotted number.
-query I
-SELECT proj.proj_version() SIMILAR TO '[0-9]+\.[0-9]+.*';
-----
-true
-
 # Unknown CRS -> clear error (not a crash).
 statement error
 SELECT proj.crs_name('NOT_A_CRS');

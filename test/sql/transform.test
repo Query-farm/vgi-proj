@@ -54,6 +54,13 @@ SELECT (proj.to_utm(-122.42, 37.77)).hemisphere;
 ----
 N
 
+# to_utm exposes the target UTM CRS's EPSG code (WGS84 / UTM zone 10N = 32610),
+# which round-trips through transform.
+query I
+SELECT (proj.to_utm(-122.42, 37.77)).epsg;
+----
+32610
+
 # NULL coordinate -> NULL struct.
 query I
 SELECT proj.to_webmercator(NULL, 37.77) IS NULL;

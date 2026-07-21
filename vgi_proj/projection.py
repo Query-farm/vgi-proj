@@ -61,6 +61,7 @@ class UTMResult(NamedTuple):
     northing: float
     zone: int
     hemisphere: str  # 'N' or 'S'
+    epsg: int  # EPSG code of the target UTM CRS (326xx N / 327xx S)
 
 
 def _finite(v: float | None) -> bool:
@@ -188,7 +189,9 @@ def to_utm(lon: float | None, lat: float | None) -> UTMResult | None:
     """Project WGS84 ``(lon, lat)`` into its auto-selected UTM zone.
 
     The zone is the standard 6-degree band ``floor((lon+180)/6)+1``; the
-    hemisphere is ``'N'`` for ``lat >= 0`` else ``'S'``. Returns ``None`` for
+    hemisphere is ``'N'`` for ``lat >= 0`` else ``'S'``; ``epsg`` is the target
+    UTM CRS's EPSG code (``326xx`` north / ``327xx`` south), which can be fed
+    straight back into ``transform`` for a round-trip. Returns ``None`` for
     NULL/non-finite or out-of-range coordinates (``|lat| > 90`` /
     ``|lon| > 180``).
     """
@@ -208,7 +211,7 @@ def to_utm(lon: float | None, lat: float | None) -> UTMResult | None:
     easting, northing = tf.transform(flon, flat)
     if not (_finite(easting) and _finite(northing)):
         return None
-    return UTMResult(easting, northing, zone, hemisphere)
+    return UTMResult(easting, northing, zone, hemisphere, epsg)
 
 
 # ---------------------------------------------------------------------------
@@ -304,3 +307,10 @@ def proj_version() -> str:
     import pyproj
 
     return str(pyproj.proj_version_str)
+
+
+def pyproj_version() -> str:
+    """Version of the ``pyproj`` Python package that bundles PROJ."""
+    import pyproj
+
+    return str(pyproj.__version__)

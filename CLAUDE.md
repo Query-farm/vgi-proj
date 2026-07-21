@@ -42,9 +42,13 @@ wrap it as a scalar in `scalars.py`, register it in `scalars.SCALAR_FUNCTIONS`
   struct schema. Each struct type is declared once as a module constant
   (`_XY_TYPE`, `_LONLAT_TYPE`, `_UTM_TYPE`) and reused in both the `compute`
   return annotation **and** `on_bind` (`BindResult(...)`). Wire both places.
-- **`proj_version()` is a zero-arg scalar**, so it takes an
-  `Annotated[int, OutputLength()]` parameter to know the row count and repeats
-  the version string that many times.
+- **The bundled PROJ / pyproj versions are catalog metadata, not a function.**
+  They live as the `proj_library_version` / `pyproj_version` tags on the `proj`
+  catalog (resolved once at import from the installed wheel), readable via
+  `vgi_catalogs()` with no query. A parameterless `proj_version()` scalar would
+  duplicate catalog metadata (vgi-lint VGI328), so it is intentionally not a
+  function. `projection.proj_version()` / `pyproj_version()` remain as the pure
+  helpers that populate those tags.
 
 ## Sharp edges (learned the hard way)
 
@@ -88,8 +92,9 @@ wrap it as a scalar in `scalars.py`, register it in `scalars.SCALAR_FUNCTIONS`
 both permissive, no copyleft. PROJ and its data grids are **bundled inside the
 `pyproj` binary wheel**, so there is no separate native install and no extra
 licensing obligation; `vgi-proj`'s own code stays MIT and is fine for commercial
-use. `proj_version()` exposes the bundled PROJ version at runtime (verifies the
-bundling claim). `pyarrow` is Apache-2.0.
+use. The bundled PROJ / pyproj versions are exposed as catalog metadata (the
+`proj_library_version` / `pyproj_version` tags, verifying the bundling claim).
+`pyarrow` is Apache-2.0.
 
 ## Testing
 
@@ -100,8 +105,11 @@ make test                     # both
 uv run ruff check . && uv run mypy vgi_proj/
 ```
 
-`make test-sql` sets `VGI_PROJ_WORKER="uv run --python 3.13 proj_worker.py"`,
-puts `~/.local/bin` on PATH, and runs `haybarn-unittest --test-dir . "test/sql/*"`.
+`make test-sql` sets `VGI_PROJ_WORKER` to the project venv interpreter running
+the worker (`$(CURDIR)/.venv/bin/python $(CURDIR)/proj_worker.py`, absolute so it
+survives haybarn's cd into a staging dir; the venv carries the locked SDK, unlike
+`uv run <script>` whose PEP 723 env can cache a stale SDK), puts `~/.local/bin`
+on PATH, and runs `haybarn-unittest --test-dir . "test/sql/*"`.
 Install the runner once with `uv tool install haybarn-unittest`. CI
 (`.github/workflows/ci.yml`) runs unit + lint + a gated `e2e` job.
 

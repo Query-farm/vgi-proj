@@ -39,7 +39,7 @@ from __future__ import annotations
 from typing import Annotated
 
 import pyarrow as pa
-from vgi.arguments import ConstParam, OutputLength, Param, Returns
+from vgi.arguments import ConstParam, Param, Returns
 from vgi.metadata import FunctionExample, NullHandling
 from vgi.scalar_function import BindParameters, BindResult, ScalarFunction
 
@@ -69,9 +69,7 @@ _EXECUTABLE_EXAMPLES = (
     '{"description": "Human-readable name of the WGS84 CRS.",'
     ' "sql": "SELECT proj.main.crs_name(\'EPSG:4326\') AS name"},'
     '{"description": "Axis units of the Web Mercator CRS.",'
-    ' "sql": "SELECT proj.main.crs_units(\'EPSG:3857\') AS units"},'
-    '{"description": "Version of the bundled PROJ library.",'
-    ' "sql": "SELECT proj.main.proj_version() AS proj_version"}'
+    ' "sql": "SELECT proj.main.crs_units(\'EPSG:3857\') AS units"}'
     "]"
 )
 
@@ -99,6 +97,11 @@ _UTM_TYPE = pa.struct(
         field("northing", pa.float64(), "Northing in metres within the UTM zone."),
         field("zone", pa.int32(), "UTM zone number (1..60)."),
         field("hemisphere", pa.string(), "Hemisphere: 'N' or 'S'."),
+        field(
+            "epsg",
+            pa.int32(),
+            "EPSG code of the target UTM CRS (326xx N / 327xx S); feed it back into transform().",
+        ),
     ]
 )
 
@@ -181,6 +184,7 @@ class TransformFunction(ScalarFunction):
                     "convert coordinates",
                     "map projection",
                 ],
+                examples=examples,
             ),
             "vgi.executable_examples": _EXECUTABLE_EXAMPLES,
         }
@@ -209,7 +213,7 @@ class TransformFunction(ScalarFunction):
 
 
 # ---------------------------------------------------------------------------
-# to_utm -- auto-pick the UTM zone (STRUCT(easting, northing, zone, hemisphere)).
+# to_utm -- auto-pick the UTM zone (STRUCT(easting, northing, zone, hemisphere, epsg)).
 # ---------------------------------------------------------------------------
 
 
@@ -222,7 +226,7 @@ class ToUtmFunction(ScalarFunction):
         name = "to_utm"
         description = (
             "Project WGS84 (lon, lat) into its auto-selected UTM zone as "
-            "STRUCT(easting, northing, zone, hemisphere); NULL/out-of-range -> NULL"
+            "STRUCT(easting, northing, zone, hemisphere, epsg); NULL/out-of-range -> NULL"
         )
         categories = ["proj", "utm"]
         null_handling = NullHandling.SPECIAL
@@ -249,7 +253,9 @@ class ToUtmFunction(ScalarFunction):
                 "or areas in metres near a single location.\n\n"
                 "**Inputs:** `lon` (-180..180 degrees), `lat` (-90..90 degrees).\n\n"
                 "**Output:** `STRUCT(easting DOUBLE, northing DOUBLE, zone INT32, "
-                "hemisphere VARCHAR)`; `hemisphere` is `'N'` or `'S'`. The zone is derived "
+                "hemisphere VARCHAR, epsg INT32)`; `hemisphere` is `'N'` or `'S'`, and "
+                "`epsg` is the target UTM CRS's EPSG code (`326xx` north / `327xx` south) "
+                "which you can feed straight back into `transform`. The zone is derived "
                 "from the longitude (`floor(lon/6)+31`).\n\n"
                 "**Edge cases:** NULL, non-finite, or out-of-range (`|lat| > 90` / "
                 "`|lon| > 180`) coordinates yield a NULL struct."
@@ -263,11 +269,14 @@ class ToUtmFunction(ScalarFunction):
                 "SELECT proj.to_utm(-122.42, 37.77).zone;   -- 10\n"
                 "```\n\n"
                 "It can also be applied per row over a lon/lat column, reading `.easting`, "
-                "`.northing`, `.zone`, or `.hemisphere` off the returned struct.\n\n"
+                "`.northing`, `.zone`, `.hemisphere`, or `.epsg` off the returned "
+                "struct.\n\n"
                 "### Notes\n\n"
-                "- Returns `STRUCT(easting, northing, zone, hemisphere)` with metres for "
-                "easting/northing.\n"
+                "- Returns `STRUCT(easting, northing, zone, hemisphere, epsg)` with metres "
+                "for easting/northing.\n"
                 "- The zone is chosen from the longitude; the hemisphere is `'N'`/`'S'`.\n"
+                "- `epsg` is the target UTM CRS code (`326xx`/`327xx`) — pass it back into "
+                "`transform` to reproject in or out of the same zone.\n"
                 "- Out-of-range or NULL coordinates produce a NULL struct."
             ),
             keywords=[
@@ -282,6 +291,7 @@ class ToUtmFunction(ScalarFunction):
                 "wgs84",
                 "grid",
             ],
+            examples=examples,
         )
 
     @classmethod
@@ -309,6 +319,7 @@ class ToUtmFunction(ScalarFunction):
                     "northing": r.northing,
                     "zone": r.zone,
                     "hemisphere": r.hemisphere,
+                    "epsg": r.epsg,
                 }
             )
         return pa.array(out, type=_UTM_TYPE)
@@ -381,6 +392,7 @@ class ToWebMercatorFunction(ScalarFunction):
                 "project",
                 "wgs84 to mercator",
             ],
+            examples=examples,
         )
 
     @classmethod
@@ -462,6 +474,7 @@ class FromWebMercatorFunction(ScalarFunction):
                 "lon lat",
                 "wgs84",
             ],
+            examples=examples,
         )
 
     @classmethod
@@ -519,7 +532,7 @@ class GeodesicDistanceFunction(ScalarFunction):
                 "-- routing, proximity filters, nearest-neighbour queries -- where accuracy "
                 "matters more than a flat-plane approximation.\n\n"
                 "**Inputs:** `lon1, lat1` (point 1) and `lon2, lat2` (point 2) in degrees.\n\n"
-                "**Output:** distance in metres (DOUBLE).\n\n"
+                "**Output:** distance in metres (`DOUBLE`).\n\n"
                 "**Edge cases:** any NULL/non-finite or out-of-range coordinate "
                 "(`|lat| > 90` / `|lon| > 180`) yields NULL. The result is ~0.3% different "
                 "from a spherical haversine because it is ellipsoidal."
@@ -554,6 +567,7 @@ class GeodesicDistanceFunction(ScalarFunction):
                 "how far",
                 "geod",
             ],
+            examples=examples,
         )
 
     @classmethod
@@ -601,7 +615,7 @@ class GeodesicBearingFunction(ScalarFunction):
                 "indicators, directional filters.\n\n"
                 "**Inputs:** `lon1, lat1` (origin) and `lon2, lat2` (destination) in "
                 "degrees.\n\n"
-                "**Output:** initial forward azimuth in degrees, `[0, 360)` (DOUBLE).\n\n"
+                "**Output:** initial forward azimuth in degrees, `[0, 360)` (`DOUBLE`).\n\n"
                 "**Edge cases:** NULL/non-finite or out-of-range coordinates yield NULL. "
                 "It is the *initial* bearing -- along a geodesic the bearing changes "
                 "continuously, so the arrival bearing differs from this value."
@@ -634,6 +648,7 @@ class GeodesicBearingFunction(ScalarFunction):
                 "degrees",
                 "wgs84",
             ],
+            examples=examples,
         )
 
     @classmethod
@@ -653,7 +668,7 @@ class GeodesicBearingFunction(ScalarFunction):
 
 
 # ---------------------------------------------------------------------------
-# CRS metadata -- crs_units / crs_name / proj_version (VARCHAR).
+# CRS metadata -- crs_units / crs_name (VARCHAR).
 # ---------------------------------------------------------------------------
 
 
@@ -685,7 +700,7 @@ class CrsUnitsFunction(ScalarFunction):
                 "linear (metres/feet) before deciding how to interpret or transform its "
                 "coordinates.\n\n"
                 "**Inputs:** `crs` -- an EPSG code/string (e.g. `'EPSG:3857'`).\n\n"
-                "**Output:** the axis unit name as VARCHAR.\n\n"
+                "**Output:** the axis unit name as `VARCHAR`.\n\n"
                 "**Edge cases:** NULL input yields NULL; an unknown/invalid CRS raises a "
                 "clear query error."
             ),
@@ -715,6 +730,7 @@ class CrsUnitsFunction(ScalarFunction):
                 "angular",
                 "linear",
             ],
+            examples=examples,
         )
 
     @classmethod
@@ -750,7 +766,7 @@ class CrsNameFunction(ScalarFunction):
                 "user-friendly way, or to confirm that a code resolves to the CRS you "
                 "expect.\n\n"
                 "**Inputs:** `crs` -- an EPSG code/string (e.g. `'EPSG:4326'`).\n\n"
-                "**Output:** the CRS name as VARCHAR.\n\n"
+                "**Output:** the CRS name as `VARCHAR`.\n\n"
                 "**Edge cases:** NULL input yields NULL; an unknown/invalid CRS raises a "
                 "clear query error."
             ),
@@ -777,80 +793,13 @@ class CrsNameFunction(ScalarFunction):
                 "identify projection",
                 "coordinate system name",
             ],
+            examples=examples,
         )
 
     @classmethod
     def compute(cls, crs: Annotated[pa.StringArray, Param(doc=_CRS_DOC)]) -> Annotated[pa.StringArray, Returns()]:
         """Map each input row to its output value."""
         return pa.array([projection.crs_name(c) for c in crs.to_pylist()], type=pa.string())
-
-
-class ProjVersionFunction(ScalarFunction):
-    """``proj_version()`` -- version of the underlying PROJ library."""
-
-    class Meta:
-        """Function metadata."""
-
-        name = "proj_version"
-        description = "Version string of the underlying PROJ library (bundled in the pyproj wheel)"
-        categories = ["proj", "crs"]
-        examples = [
-            FunctionExample(
-                sql="SELECT proj.proj_version()",
-                description="PROJ library version",
-            ),
-        ]
-        tags = object_tags(
-            title="Bundled PROJ Library Version",
-            category="crs",
-            doc_llm=(
-                "# proj_version\n\n"
-                "Return the version string of the **PROJ** C library bundled inside the "
-                "`pyproj` wheel that powers every transform in this worker (a zero-argument "
-                "scalar).\n\n"
-                "**When to use:** for diagnostics and reproducibility -- to record which "
-                "PROJ release produced a set of transformed coordinates, or to confirm the "
-                "library is present and bundled (no separate native install).\n\n"
-                "**Inputs:** none.\n\n"
-                "**Output:** the PROJ version string (e.g. `'9.4.0'`) as VARCHAR, repeated "
-                "once per output row.\n\n"
-                "**Edge cases:** none -- it always returns a value; it never depends on "
-                "input data or a network."
-            ),
-            doc_md=(
-                "## proj_version()\n\n"
-                "Return the version of the bundled PROJ library (zero-argument scalar).\n\n"
-                "### Usage\n\n"
-                "```sql\n"
-                "SELECT proj.proj_version();  -- e.g. '9.4.0'\n"
-                "```\n\n"
-                "### Notes\n\n"
-                "- PROJ and its data grids are bundled in the `pyproj` wheel, so this "
-                "confirms the bundling and reports the exact release.\n"
-                "- Useful for provenance: which PROJ produced these coordinates.\n"
-                "- Takes no arguments and never returns NULL."
-            ),
-            keywords=[
-                "proj version",
-                "proj library",
-                "pyproj",
-                "version",
-                "diagnostics",
-                "provenance",
-                "build info",
-                "library version",
-                "about",
-            ],
-        )
-
-    @classmethod
-    def compute(
-        cls,
-        _length: Annotated[int, OutputLength()],
-    ) -> Annotated[pa.StringArray, Returns()]:
-        """Map each input row to its output value."""
-        version = projection.proj_version()
-        return pa.array([version] * _length, type=pa.string())
 
 
 SCALAR_FUNCTIONS: list[type] = [
@@ -862,5 +811,4 @@ SCALAR_FUNCTIONS: list[type] = [
     GeodesicBearingFunction,
     CrsUnitsFunction,
     CrsNameFunction,
-    ProjVersionFunction,
 ]

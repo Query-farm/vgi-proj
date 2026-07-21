@@ -75,6 +75,7 @@ class TestUTM:
         assert r is not None
         assert r.zone == 10
         assert r.hemisphere == "N"
+        assert r.epsg == 32610  # WGS84 / UTM zone 10N
         assert math.isclose(r.easting, 551081.30, abs_tol=1.0)
         assert math.isclose(r.northing, 4180454.90, abs_tol=1.0)
 
@@ -84,6 +85,7 @@ class TestUTM:
         assert r is not None
         assert r.zone == 56
         assert r.hemisphere == "S"
+        assert r.epsg == 32756  # WGS84 / UTM zone 56S
 
     def test_out_of_range_and_null(self) -> None:
         assert projection.to_utm(0.0, 91.0) is None

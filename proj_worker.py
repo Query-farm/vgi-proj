@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "vgi-python[http]>=0.15.0",
+#     "vgi-python[http]>=0.16.0",
 #     "pyproj>=3.6",
 #     "pyarrow",
 # ]
@@ -27,13 +27,16 @@ Usage:
     SELECT proj.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857');  -- STRUCT(x, y)
     SELECT proj.to_webmercator(-122.4194, 37.7749);                   -- STRUCT(x, y)
     SELECT proj.from_webmercator(x, y);                               -- STRUCT(lon, lat)
-    SELECT proj.to_utm(-122.42, 37.77);                               -- STRUCT(easting, northing, zone, hemi)
+    SELECT proj.to_utm(-122.42, 37.77);                               -- STRUCT(easting, northing, zone, hemi, epsg)
     SELECT proj.to_utm(-122.42, 37.77).zone;                          -- 10
     SELECT proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074);-- ~5585000 m
     SELECT proj.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074); -- degrees
     SELECT proj.crs_name('EPSG:4326');                                -- 'WGS 84'
     SELECT proj.crs_units('EPSG:3857');                               -- 'metre'
-    SELECT proj.proj_version();                                       -- PROJ version
+
+The bundled PROJ / pyproj library versions are exposed as catalog metadata
+(``proj_library_version`` / ``pyproj_version`` tags on the ``proj`` catalog),
+readable via ``vgi_catalogs()`` without running a query.
 """
 
 from __future__ import annotations
@@ -172,15 +175,6 @@ _AGENT_TEST_TASKS = json.dumps(
             "success_criteria": "Answers -122.42 (the recovered longitude).",
             "ignore_column_names": True,
         },
-        {
-            # proj_version returns the bundled PROJ version string. The reference_sql runs live
-            # against the same worker, so an exact compare is stable (both sides see one build).
-            "name": "proj_library_version",
-            "prompt": ("What version string does this worker report for the bundled PROJ library?"),
-            "reference_sql": "SELECT proj.main.proj_version()",
-            "success_criteria": "Answers the bundled PROJ version string (e.g. '9.5.1').",
-            "ignore_column_names": True,
-        },
     ]
 )
 
@@ -253,15 +247,22 @@ _CATALOG_TAGS = {
         "accurate WGS84-ellipsoid geodesic distance and initial bearing between two "
         "longitude/latitude points; and lookups of a CRS's human-readable name and axis "
         "units alongside the bundled PROJ library version. Reprojection results come back "
-        "as typed STRUCT coordinates, while the geodesic and metadata functions return "
-        "plain metres, degrees, or strings. List the schema to discover the exact functions "
-        "and their signatures.\n\n"
+        "as typed `STRUCT` coordinates, while the geodesic and metadata functions return "
+        "plain metres, degrees, or strings. Because every CRS is named by its standard "
+        "EPSG code and all transforms share the same `always_xy` axis convention, results "
+        "line up with what PostGIS, QGIS, and other PROJ-based tools produce.\n\n"
         "NULL or non-finite (and, where applicable, out-of-range) coordinates yield NULL, "
         "while an unknown CRS raises a clear query error."
     ),
     "vgi.author": "Query.Farm",
     "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
     "vgi.license": "MIT",
+    # VGI328: the bundled upstream library versions are catalog metadata (readable
+    # from vgi_catalogs() with no query, and they can't drift from the running
+    # build) rather than a parameterless proj_version() scalar. Resolved once at
+    # import from the installed pyproj wheel.
+    "proj_library_version": projection.proj_version(),
+    "pyproj_version": projection.pyproj_version(),
     "vgi.support_contact": f"{_REPO_URL}/issues",
     "vgi.support_policy_url": f"{_REPO_URL}/blob/main/README.md",
     # VGI152/VGI920: fixed agent-suitability task suite (see _AGENT_TEST_TASKS).
@@ -313,28 +314,55 @@ _MAIN_SCHEMA_TAGS = {
         "## Capabilities\n\n"
         "Reproject coordinates between CRSs identified by EPSG code -- including shorthands "
         "for the Web Mercator tile projection and a point's auto-selected UTM zone -- "
-        "returning typed STRUCT outputs. Measure accurate ellipsoidal (WGS84) geodesic "
+        "returning typed `STRUCT` outputs. Measure accurate ellipsoidal (WGS84) geodesic "
         "distance in metres and initial bearing in degrees between two longitude/latitude "
-        "points. Look up CRS metadata such as a system's display name and axis units, plus "
-        "the bundled PROJ library version. List the schema to see each function and its "
-        "signature.\n\n"
+        "points. Look up CRS metadata such as a system's display name and axis units to "
+        "confirm a code resolves to the CRS you expect before interpreting its "
+        "coordinates.\n\n"
         "## Conventions\n\n"
         "All coordinate I/O uses `always_xy` axis order "
         "`(x/easting/longitude, y/northing/latitude)` regardless of the CRS's declared "
         "native axis order. NULL/non-finite (and, where applicable, out-of-range) "
         "coordinates yield NULL; an unknown CRS raises a clear query error."
     ),
-    # VGI506 representative example queries for the schema (catalog-qualified SQL).
-    "vgi.example_queries": (
-        "SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857');\n"
-        "SELECT proj.main.to_utm(-122.42, 37.77).zone;\n"
-        "SELECT proj.main.to_webmercator(-122.4194, 37.7749);\n"
-        "SELECT proj.main.from_webmercator(-13627665.27, 4547675.35);\n"
-        "SELECT proj.main.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074);\n"
-        "SELECT proj.main.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074);\n"
-        "SELECT proj.main.crs_name('EPSG:4326');\n"
-        "SELECT proj.main.crs_units('EPSG:3857');\n"
-        "SELECT proj.main.proj_version();"
+    # VGI506/VGI515: representative example queries for the schema as a described
+    # list (each entry {description, sql}, catalog-qualified so it runs when the
+    # worker is attached).
+    "vgi.example_queries": json.dumps(
+        [
+            {
+                "description": "Transform a WGS84 lon/lat point to Web Mercator metres.",
+                "sql": "SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857')",
+            },
+            {
+                "description": "Get the UTM zone number for a San Francisco lon/lat.",
+                "sql": "SELECT proj.main.to_utm(-122.42, 37.77).zone",
+            },
+            {
+                "description": "Project a WGS84 point to Web Mercator via the shorthand.",
+                "sql": "SELECT proj.main.to_webmercator(-122.4194, 37.7749)",
+            },
+            {
+                "description": "Round-trip Web Mercator metres back to WGS84 lon/lat.",
+                "sql": "SELECT proj.main.from_webmercator(-13627665.27, 4547675.35)",
+            },
+            {
+                "description": "Geodesic distance New York to London, in metres.",
+                "sql": "SELECT proj.main.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074)",
+            },
+            {
+                "description": "Initial geodesic bearing from New York toward London, in degrees.",
+                "sql": "SELECT proj.main.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074)",
+            },
+            {
+                "description": "Human-readable name of the WGS84 CRS.",
+                "sql": "SELECT proj.main.crs_name('EPSG:4326')",
+            },
+            {
+                "description": "Axis units of the Web Mercator CRS.",
+                "sql": "SELECT proj.main.crs_units('EPSG:3857')",
+            },
+        ]
     ),
 }
 

@@ -95,7 +95,10 @@ jobs:
       - name: vgi-lint
         uses: Query-farm/vgi-lint-check@v1
         with:
-          location: "uv run --python 3.13 ${{ github.workspace }}/proj_worker.py"
+          # Attach through the synced project venv (not `uv run <script>`, whose
+          # PEP 723 script env can resolve a stale cached SDK and emit an old
+          # catalog schema). The venv already has the current SDK from uv sync.
+          location: "${{ github.workspace }}/.venv/bin/python ${{ github.workspace }}/proj_worker.py"
           fail-on: info
 
   # Resolve the latest published haybarn release once, so the whole matrix tests
@@ -155,14 +158,14 @@ jobs:
       - name: Resolve runner + worker paths
         run: |
           # Absolute paths: run-integration.sh cd's into a staging dir before
-          # invoking the runner, so relative paths would not resolve. The worker
-          # is a repo-root PEP 723 script (no console-script); `uv run` reads its
-          # inline deps and resolves them from PyPI, so an absolute script path
-          # spawns correctly regardless of cwd.
+          # invoking the runner, so relative paths would not resolve.
           UNITTEST="$PWD/$(find hb -name 'haybarn-unittest' -type f | head -1)"
           chmod +x "$UNITTEST"
           echo "HAYBARN_UNITTEST=$UNITTEST" >> "$GITHUB_ENV"
-          echo "WORKER_CMD=uv run --python 3.13 $PWD/proj_worker.py" >> "$GITHUB_ENV"
+          # Spawn via the synced project venv interpreter (absolute paths, since
+          # the runner cd's into a staging dir) rather than `uv run <script>`,
+          # keeping the SDK identical to the locked/synced one.
+          echo "WORKER_CMD=$PWD/.venv/bin/python $PWD/proj_worker.py" >> "$GITHUB_ENV"
 
       - name: Run extension integration suite (${{ matrix.transport }})
         run: ci/run-integration.sh

@@ -20,6 +20,7 @@ once on the catalog and intentionally NOT repeated on every function/schema.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 REPO_URL = "https://github.com/Query-farm/vgi-proj"
 
@@ -33,6 +34,20 @@ def keywords_json(keywords: list[str]) -> str:
     return json.dumps(keywords)
 
 
+def example_queries_json(examples: list[Any]) -> str:
+    """Serialize function examples into a ``vgi.example_queries`` tag (VGI515).
+
+    A function's ``Meta.examples`` (``FunctionExample`` objects) reach the
+    catalog through the native ``duckdb_functions().examples`` column, which is a
+    plain ``VARCHAR[]`` of SQL text -- the per-example ``description`` is dropped
+    there. VGI515 requires every example to carry a description, so we re-emit the
+    same ``(description, sql)`` pairs as the ``vgi.example_queries`` described-list
+    tag. The linter merges the two carriers, deduped by SQL, so each example ends
+    up described exactly once.
+    """
+    return json.dumps([{"description": ex.description, "sql": ex.sql} for ex in examples])
+
+
 def object_tags(
     *,
     title: str,
@@ -40,6 +55,7 @@ def object_tags(
     doc_md: str,
     keywords: list[str],
     category: str,
+    examples: list[Any] | None = None,
 ) -> dict[str, str]:
     """Build the standard per-object discovery/description tags.
 
@@ -48,11 +64,18 @@ def object_tags(
     ``vgi.categories`` entries (VGI410/VGI413), emitted as ``vgi.category`` so
     the object slots into the schema's navigation registry. ``vgi.source_url``
     is intentionally omitted here -- it belongs only on the catalog (VGI139).
+
+    ``examples`` (a function's ``Meta.examples``), when given, is re-emitted as
+    the ``vgi.example_queries`` described-list tag so every example carries a
+    description (VGI515) -- the native examples column drops descriptions.
     """
-    return {
+    tags = {
         "vgi.title": title,
         "vgi.doc_llm": doc_llm,
         "vgi.doc_md": doc_md,
         "vgi.keywords": keywords_json(keywords),
         "vgi.category": category,
     }
+    if examples:
+        tags["vgi.example_queries"] = example_queries_json(examples)
+    return tags

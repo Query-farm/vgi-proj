@@ -129,6 +129,7 @@ class TestUTM:
         rec = out[0]
         assert rec["zone"] == 10
         assert rec["hemisphere"] == "N"
+        assert rec["epsg"] == 32610
         assert math.isclose(rec["easting"], 551081.30, abs_tol=1.0)
 
     def test_null(self, client: Client) -> None:
@@ -170,10 +171,6 @@ class TestCrsMetadata:
 
     def test_crs_units(self, client: Client) -> None:
         assert _call_str(client, "crs_units", ["EPSG:3857"]) == ["metre"]
-
-    def test_proj_version(self, client: Client) -> None:
-        out = _call_str(client, "proj_version", ["EPSG:4326"])
-        assert out[0] and out[0][0].isdigit()
 
     def test_unknown_crs_errors(self, client: Client) -> None:
         from vgi.client import ClientError

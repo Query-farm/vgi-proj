@@ -26,14 +26,17 @@ ATTACH 'proj' (TYPE vgi, LOCATION 'uv run proj_worker.py');
 SELECT proj.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857'); -- STRUCT(x, y)
 SELECT proj.to_webmercator(-122.4194, 37.7749);                  -- STRUCT(x, y) metres
 SELECT proj.from_webmercator(-13627665, 4547675);                -- STRUCT(lon, lat)
-SELECT proj.to_utm(-122.42, 37.77);                              -- STRUCT(easting, northing, zone, hemisphere)
+SELECT proj.to_utm(-122.42, 37.77);                              -- STRUCT(easting, northing, zone, hemisphere, epsg)
 SELECT proj.to_utm(-122.42, 37.77).zone;                         -- 10
 SELECT proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074); -- ~5,585,000 m (NYC -> London)
 SELECT proj.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074);  -- ~51 deg
 SELECT proj.crs_name('EPSG:4326');                               -- 'WGS 84'
 SELECT proj.crs_units('EPSG:3857');                              -- 'metre'
-SELECT proj.proj_version();                                      -- PROJ library version
 ```
+
+The bundled PROJ and `pyproj` versions are exposed as catalog metadata (the
+`proj_library_version` / `pyproj_version` tags on the `proj` catalog), readable
+via `vgi_catalogs()` without running a query.
 
 ## Axis order: always (x, y) = (lon/easting, lat/northing)
 
@@ -76,14 +79,13 @@ the worker never crashes.
 | Function | Form | Signature | Returns |
 | --- | --- | --- | --- |
 | `transform` | scalar | `(x, y, from_crs, to_crs)` | `STRUCT(x DOUBLE, y DOUBLE)` |
-| `to_utm` | scalar | `(lon, lat)` | `STRUCT(easting DOUBLE, northing DOUBLE, zone INT, hemisphere VARCHAR)` |
+| `to_utm` | scalar | `(lon, lat)` | `STRUCT(easting DOUBLE, northing DOUBLE, zone INT, hemisphere VARCHAR, epsg INT)` |
 | `to_webmercator` | scalar | `(lon, lat)` | `STRUCT(x DOUBLE, y DOUBLE)` — metres |
 | `from_webmercator` | scalar | `(x, y)` | `STRUCT(lon DOUBLE, lat DOUBLE)` |
 | `geodesic_distance` | scalar | `(lon1, lat1, lon2, lat2)` | `DOUBLE` — metres (WGS84 geodesic) |
 | `geodesic_bearing` | scalar | `(lon1, lat1, lon2, lat2)` | `DOUBLE` — initial azimuth, degrees [0,360) |
 | `crs_units` | scalar | `(crs)` | `VARCHAR` — first-axis unit (e.g. `'degree'`, `'metre'`) |
 | `crs_name` | scalar | `(crs)` | `VARCHAR` — human-readable CRS name |
-| `proj_version` | scalar | `()` | `VARCHAR` — PROJ library version |
 
 CRS identifiers are EPSG codes/strings, e.g. `'EPSG:4326'` (WGS84) or
 `'EPSG:3857'` (Web Mercator). All coordinates are `DOUBLE`. STRUCT returns are
@@ -124,8 +126,9 @@ SELECT proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074);  -- ~5,585,00
 
 `pyproj` and PROJ are both permissively licensed (MIT / X11-style), so
 `vgi-proj`'s own MIT code is fine for commercial use with no copyleft caveat.
-PROJ and its data are bundled inside the `pyproj` binary wheel — verified at
-runtime via `proj_version()`.
+PROJ and its data are bundled inside the `pyproj` binary wheel — the bundled
+versions are surfaced as the `proj_library_version` / `pyproj_version` catalog
+tags (readable from `vgi_catalogs()`).
 
 ## Local development
 
