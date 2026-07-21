@@ -8,18 +8,22 @@ Contributor/agent notes. User-facing docs live in `README.md`; this is the
 A [VGI](https://query.farm) worker that does **CRS transformations** and
 **accurate WGS84 geodesic distance/bearing** as DuckDB scalar functions, via
 `pyproj` (which wraps the PROJ C library; the wheel **bundles PROJ + data**, no
-separate native install). `proj_worker.py` assembles every function into one
-`proj` catalog (single `main` schema) over stdio. Sibling style/tooling to
-`vgi-geocode` / `vgi-conform`.
+separate native install). `vgi_proj/worker.py` assembles every function into one
+`proj` catalog (single `main` schema); `proj_worker.py` at the repo root is a
+thin PEP 723 shim that re-exports it so `uv run proj_worker.py` keeps working.
+Sibling style/tooling to `vgi-geocode` / `vgi-conform`.
 
 ## Layout
 
 ```
-proj_worker.py         repo-root stdio entry point; PEP 723 inline deps; main(); warms Transformers in run()
+proj_worker.py         repo-root PEP 723 shim; re-exports ProjWorker/main from vgi_proj.worker (keeps `uv run proj_worker.py`)
 vgi_proj/
+  worker.py            wheel-importable: assembles the `proj` catalog + ProjWorker (warms Transformers in run()) + main()
   projection.py        pure pyproj/PROJ transform + geodesic logic; no Arrow/VGI; unit-testable; cached Transformers
   scalars.py           per-row scalars; transform/to_utm/to_webmercator/from_webmercator return STRUCTs
   schema_utils.py      pa.Field comment / column-doc helper
+bin/vgi-proj-worker    uv-run launch wrapper for a plain filesystem ATTACH LOCATION
+Dockerfile             single image serving http (default) + stdio; `pip install .[serve]`
 tests/                 pytest: test_projection (pure), test_scalars (Client RPC)
 test/sql/*.test        haybarn-unittest sqllogictest — authoritative E2E
 Makefile               test / test-unit / test-sql / lint

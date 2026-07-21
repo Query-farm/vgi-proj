@@ -35,6 +35,10 @@ REPO="$(cd "$HERE/.." && pwd)"
 STAGE="${STAGE:-$(mktemp -d)}"
 TRANSPORT="${TRANSPORT:-subprocess}"
 WORKER_CMD="${WORKER_CMD:-uv run --python 3.13 $REPO/proj_worker.py}"
+# Glob/path (under the staged tree) of the suite to run. Defaults to the whole
+# suite; the Docker image_test narrows it to a single file for the cold-container
+# stdio smoke.
+TEST_PATTERN="${TEST_PATTERN:-test/sql/*}"
 
 echo "Staging preprocessed tests into $STAGE ..."
 mkdir -p "$STAGE/test/sql"
@@ -97,38 +101,47 @@ case "$TRANSPORT" in
       ' "$sf" > "$sf.tmp" && mv "$sf.tmp" "$sf"
     done
 
-    # Boot the worker in HTTP mode on an auto-selected port. The worker writes
-    # the chosen port to --port-file atomically (tmp + rename), so we watch for
-    # the file to appear rather than parsing stdout. HTTP mode needs the `http`
-    # extra (waitress); WORKER_CMD must resolve it — CI installs it via
-    # `uv sync --extra http` and the PEP 723 header lists the extra too.
-    PORT_FILE="$(mktemp -u "${TMPDIR:-/tmp}/proj-port.XXXXXX")"
-    LOG_FILE="${TMPDIR:-/tmp}/proj-http-server.log"
-    echo "Starting HTTP worker: $WORKER_CMD --http --port 0 --port-file $PORT_FILE"
-    # shellcheck disable=SC2086
-    $WORKER_CMD --http --port 0 --port-file "$PORT_FILE" > "$LOG_FILE" 2>&1 &
-    SERVER_PID=$!
+    # Two ways in: either WORKER_CMD is ALREADY an http(s):// URL of a
+    # pre-launched worker (e.g. the Docker image_test points at a warm
+    # container) — then just use it as the LOCATION — or it is a stdio command
+    # we boot here in --http mode on an auto-selected port.
+    if [[ "$WORKER_CMD" =~ ^https?:// ]]; then
+      echo "Using pre-launched HTTP worker at $WORKER_CMD"
+      export VGI_PROJ_WORKER="$WORKER_CMD"
+    else
+      # Boot the worker in HTTP mode on an auto-selected port. The worker writes
+      # the chosen port to --port-file atomically (tmp + rename), so we watch for
+      # the file to appear rather than parsing stdout. HTTP mode needs the `http`
+      # extra (waitress); WORKER_CMD must resolve it — CI installs it via
+      # `uv sync --extra http` and the PEP 723 header lists the extra too.
+      PORT_FILE="$(mktemp -u "${TMPDIR:-/tmp}/proj-port.XXXXXX")"
+      LOG_FILE="${TMPDIR:-/tmp}/proj-http-server.log"
+      echo "Starting HTTP worker: $WORKER_CMD --http --port 0 --port-file $PORT_FILE"
+      # shellcheck disable=SC2086
+      $WORKER_CMD --http --port 0 --port-file "$PORT_FILE" > "$LOG_FILE" 2>&1 &
+      SERVER_PID=$!
 
-    PORT=""
-    for _ in $(seq 1 240); do
-      if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-        echo "ERROR: HTTP worker exited before reporting a port. Log:" >&2
+      PORT=""
+      for _ in $(seq 1 240); do
+        if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+          echo "ERROR: HTTP worker exited before reporting a port. Log:" >&2
+          cat "$LOG_FILE" >&2
+          exit 1
+        fi
+        if [[ -s "$PORT_FILE" ]]; then
+          PORT="$(tr -d '[:space:]' < "$PORT_FILE")"
+          [[ -n "$PORT" ]] && break
+        fi
+        sleep 0.5
+      done
+      if [[ -z "$PORT" ]]; then
+        echo "ERROR: timed out waiting for HTTP worker port-file. Log:" >&2
         cat "$LOG_FILE" >&2
         exit 1
       fi
-      if [[ -s "$PORT_FILE" ]]; then
-        PORT="$(tr -d '[:space:]' < "$PORT_FILE")"
-        [[ -n "$PORT" ]] && break
-      fi
-      sleep 0.5
-    done
-    if [[ -z "$PORT" ]]; then
-      echo "ERROR: timed out waiting for HTTP worker port-file. Log:" >&2
-      cat "$LOG_FILE" >&2
-      exit 1
+      echo "HTTP worker ready on port $PORT (pid $SERVER_PID)"
+      export VGI_PROJ_WORKER="http://127.0.0.1:$PORT"
     fi
-    echo "HTTP worker ready on port $PORT (pid $SERVER_PID)"
-    export VGI_PROJ_WORKER="http://127.0.0.1:$PORT"
     ;;
 
   unix)
@@ -193,10 +206,10 @@ rm -f "$STAGE/test/_warm.test"
 # setup would therefore report "All tests were skipped" and go GREEN while
 # testing nothing. Capture the output, echo it, and fail if the runner did not
 # report a positive number of passing tests.
-echo "Running suite (transport: $TRANSPORT, worker: $VGI_PROJ_WORKER) ..."
+echo "Running suite (transport: $TRANSPORT, worker: $VGI_PROJ_WORKER, pattern: $TEST_PATTERN) ..."
 OUT_FILE="$(mktemp)"
 set +e
-"$HAYBARN_UNITTEST" "test/sql/*" 2>&1 | tee "$OUT_FILE"
+"$HAYBARN_UNITTEST" "$TEST_PATTERN" 2>&1 | tee "$OUT_FILE"
 RC="${PIPESTATUS[0]}"
 set -e
 if [[ "$RC" -ne 0 ]]; then
