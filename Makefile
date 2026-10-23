@@ -8,7 +8,7 @@
 # test-sql is self-contained: it points VGI_PROJ_WORKER at the worker run as a
 # stdio subprocess (exactly how DuckDB drives it after ATTACH) and runs the
 # files under test/sql/. haybarn-unittest is a uv tool:
-#   uv tool install haybarn-unittest   # installs ~/.local/bin/haybarn-unittest
+#   uv tool install 'haybarn-unittest<2'   # installs ~/.local/bin/haybarn-unittest
 
 # Worker command DuckDB uses for ATTACH (overridable). Use the project venv's
 # interpreter with absolute paths: haybarn cd's into a staging dir before ATTACH,
