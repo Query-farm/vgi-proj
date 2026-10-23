@@ -77,10 +77,12 @@ _SCHEMA_CATEGORIES = json.dumps(
 )
 
 # VGI152/VGI920: a fixed agent-suitability suite. Each task's `prompt` is the only
-# text the analyst LLM sees; `reference_sql` is the grader-only canonical answer.
-# All references are deterministic (stable strings, integer zones, or rounded
-# metres/degrees/coordinates) and `ignore_column_names` is set so grading matches
-# on values regardless of how the analyst aliases its output column.
+# text the analyst LLM sees; only the public {name, prompt} pairs are published
+# here (VGI416). The grader-only canonical `reference_sql` and grading options
+# live in vgi-agent-tests.yaml at the repo root. All references are deterministic
+# (stable strings, integer zones, or rounded metres/degrees/coordinates) and
+# `ignore_column_names` is set so grading matches on values regardless of how the
+# analyst aliases its output column.
 _AGENT_TEST_TASKS = json.dumps(
     [
         {
@@ -89,16 +91,10 @@ _AGENT_TEST_TASKS = json.dumps(
                 "What is the official human-readable name of the coordinate reference "
                 "system identified by EPSG code 4326?"
             ),
-            "reference_sql": "SELECT proj.main.crs_name('EPSG:4326')",
-            "success_criteria": "Answers 'WGS 84', the display name of EPSG:4326.",
-            "ignore_column_names": True,
         },
         {
             "name": "crs_axis_units",
             "prompt": ("What are the linear axis units of the Web Mercator coordinate reference system, EPSG:3857?"),
-            "reference_sql": "SELECT proj.main.crs_units('EPSG:3857')",
-            "success_criteria": "Answers 'metre' (the axis unit of EPSG:3857).",
-            "ignore_column_names": True,
         },
         {
             "name": "utm_zone_for_point",
@@ -106,9 +102,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "Which UTM zone number contains the WGS84 location at longitude -122.42, "
                 "latitude 37.77? Return just the zone number."
             ),
-            "reference_sql": "SELECT proj.main.to_utm(-122.42, 37.77).zone",
-            "success_criteria": "Answers 10 (the UTM zone for that longitude).",
-            "ignore_column_names": True,
         },
         {
             "name": "geodesic_distance_km",
@@ -117,9 +110,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "kilometres (rounded to the nearest kilometre) between New York at longitude "
                 "-74.006, latitude 40.7128 and London at longitude -0.1276, latitude 51.5074?"
             ),
-            "reference_sql": ("SELECT round(proj.main.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074) / 1000)"),
-            "success_criteria": "Answers about 5585 kilometres.",
-            "ignore_column_names": True,
         },
         {
             "name": "geodesic_bearing_deg",
@@ -128,9 +118,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "nearest degree) from New York at longitude -74.006, latitude 40.7128 toward "
                 "London at longitude -0.1276, latitude 51.5074?"
             ),
-            "reference_sql": ("SELECT round(proj.main.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074))"),
-            "success_criteria": "Answers about 51 degrees (initial forward azimuth).",
-            "ignore_column_names": True,
         },
         {
             "name": "to_web_mercator_x",
@@ -139,9 +126,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "Mercator (EPSG:3857) and give its x coordinate in metres, rounded to the "
                 "nearest metre."
             ),
-            "reference_sql": "SELECT round(proj.main.to_webmercator(-122.4194, 37.7749).x)",
-            "success_criteria": "Answers about -13627665 metres for the x coordinate.",
-            "ignore_column_names": True,
         },
         {
             # transform returns STRUCT(x, y) floats; ask for the rounded x value (the form
@@ -152,9 +136,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "into Web Mercator (EPSG:3857), and give its x coordinate in metres, rounded to "
                 "the nearest metre."
             ),
-            "reference_sql": "SELECT round(proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857').x)",
-            "success_criteria": "Answers about -13627732 metres for the x coordinate.",
-            "ignore_column_names": True,
         },
         {
             # from_webmercator returns STRUCT(lon, lat) floats; ask for the recovered longitude
@@ -165,9 +146,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "to WGS84, and give the recovered longitude in degrees, rounded to 2 decimal "
                 "places."
             ),
-            "reference_sql": "SELECT round(proj.main.from_webmercator(-13627665.27, 4547675.35).lon, 2)",
-            "success_criteria": "Answers -122.42 (the recovered longitude).",
-            "ignore_column_names": True,
         },
     ]
 )
@@ -368,7 +346,7 @@ _PROJ_CATALOG = Catalog(
     source_url=_REPO_URL,
     schemas=[
         Schema(
-            name="main",
+            path=["main"],
             comment="CRS transforms (always_xy) + WGS84 geodesic distance/bearing via pyproj/PROJ",
             tags=_MAIN_SCHEMA_TAGS,
             functions=list(SCALAR_FUNCTIONS),

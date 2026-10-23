@@ -40,6 +40,7 @@ def _call(
     results = list(
         client.scalar_function(
             function_name=name,
+            schema_path=["main"],
             input=iter([batch]),
             arguments=Arguments(positional=positional or []),
         )
@@ -52,6 +53,7 @@ def _call_str(client: Client, name: str, values: list[str | None]) -> list:
     results = list(
         client.scalar_function(
             function_name=name,
+            schema_path=["main"],
             input=iter([batch]),
             arguments=Arguments(positional=[]),
         )

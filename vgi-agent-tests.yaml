@@ -1,0 +1,36 @@
+# Private graders for `vgi-lint simulate` (VGI416). The worker publishes only
+# task names and prompts in vgi.agent_test_tasks; these canonical solutions and
+# grading options stay in the repo and are merged by task name.
+tasks:
+  - name: crs_display_name
+    reference_sql: "SELECT proj.main.crs_name('EPSG:4326')"
+    success_criteria: "Answers 'WGS 84', the display name of EPSG:4326."
+    ignore_column_names: true
+  - name: crs_axis_units
+    reference_sql: "SELECT proj.main.crs_units('EPSG:3857')"
+    success_criteria: "Answers 'metre' (the axis unit of EPSG:3857)."
+    ignore_column_names: true
+  - name: utm_zone_for_point
+    reference_sql: "SELECT proj.main.to_utm(-122.42, 37.77).zone"
+    success_criteria: "Answers 10 (the UTM zone for that longitude)."
+    ignore_column_names: true
+  - name: geodesic_distance_km
+    reference_sql: "SELECT round(proj.main.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074) / 1000)"
+    success_criteria: "Answers about 5585 kilometres."
+    ignore_column_names: true
+  - name: geodesic_bearing_deg
+    reference_sql: "SELECT round(proj.main.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074))"
+    success_criteria: "Answers about 51 degrees (initial forward azimuth)."
+    ignore_column_names: true
+  - name: to_web_mercator_x
+    reference_sql: "SELECT round(proj.main.to_webmercator(-122.4194, 37.7749).x)"
+    success_criteria: "Answers about -13627665 metres for the x coordinate."
+    ignore_column_names: true
+  - name: transform_to_web_mercator_x
+    reference_sql: "SELECT round(proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857').x)"
+    success_criteria: "Answers about -13627732 metres for the x coordinate."
+    ignore_column_names: true
+  - name: from_web_mercator_longitude
+    reference_sql: "SELECT round(proj.main.from_webmercator(-13627665.27, 4547675.35).lon, 2)"
+    success_criteria: "Answers -122.42 (the recovered longitude)."
+    ignore_column_names: true

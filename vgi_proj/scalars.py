@@ -36,7 +36,7 @@ constant and reused in both the ``compute`` annotation and ``on_bind``.
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, cast
 
 import pyarrow as pa
 from vgi.arguments import ConstParam, Param, Returns
@@ -209,7 +209,7 @@ class TransformFunction(ScalarFunction):
             (lambda r: {"x": r.x, "y": r.y} if r is not None else None)(projection.transform(xv, yv, from_crs, to_crs))
             for xv, yv in zip(xs, ys, strict=True)
         ]
-        return pa.array(out, type=_XY_TYPE)
+        return cast(pa.StructArray, pa.array(out, type=_XY_TYPE))
 
 
 # ---------------------------------------------------------------------------
@@ -322,7 +322,7 @@ class ToUtmFunction(ScalarFunction):
                     "epsg": r.epsg,
                 }
             )
-        return pa.array(out, type=_UTM_TYPE)
+        return cast(pa.StructArray, pa.array(out, type=_UTM_TYPE))
 
 
 # ---------------------------------------------------------------------------
@@ -413,7 +413,7 @@ class ToWebMercatorFunction(ScalarFunction):
         for lo, la in zip(lons, lats, strict=True):
             r = projection.to_webmercator(lo, la)
             out.append(None if r is None else {"x": r.x, "y": r.y})
-        return pa.array(out, type=_XY_TYPE)
+        return cast(pa.StructArray, pa.array(out, type=_XY_TYPE))
 
 
 class FromWebMercatorFunction(ScalarFunction):
@@ -495,7 +495,7 @@ class FromWebMercatorFunction(ScalarFunction):
         for xv, yv in zip(xs, ys, strict=True):
             r = projection.from_webmercator(xv, yv)
             out.append(None if r is None else {"lon": r.x, "lat": r.y})
-        return pa.array(out, type=_LONLAT_TYPE)
+        return cast(pa.StructArray, pa.array(out, type=_LONLAT_TYPE))
 
 
 # ---------------------------------------------------------------------------
