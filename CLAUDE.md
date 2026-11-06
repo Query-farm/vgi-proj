@@ -113,8 +113,8 @@ uv run ruff check . && uv run mypy vgi_proj/
 the worker (`$(CURDIR)/.venv/bin/python $(CURDIR)/proj_worker.py`, absolute so it
 survives haybarn's cd into a staging dir; the venv carries the locked SDK, unlike
 `uv run <script>` whose PEP 723 env can cache a stale SDK), puts `~/.local/bin`
-on PATH, and runs `haybarn-unittest --test-dir . "test/sql/*"`.
-Install the runner once with `uv tool install haybarn-unittest`. CI
+on PATH, and runs `haybarn-unittest --keep-home --test-dir . "test/sql/*"`.
+Install the runner once with `uv tool install --prerelease allow 'haybarn-unittest>=2.0.0rc11,<2.1'`. CI
 (`.github/workflows/ci.yml`) runs unit + lint + a gated `e2e` job.
 
 Everything is pure/offline (no network, no API keys, no model downloads) — PROJ

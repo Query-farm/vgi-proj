@@ -8,7 +8,7 @@ statement ok
 LOAD vgi;
 
 statement ok
-ATTACH 'proj' AS proj (TYPE vgi, LOCATION '${VGI_PROJ_WORKER}');
+ATTACH 'proj' AS proj (TYPE vgi, LOCATION '{VGI_PROJ_WORKER}');
 
 # Web Mercator origin: (0, 0) -> (0, 0).
 query I
