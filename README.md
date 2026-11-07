@@ -21,7 +21,7 @@ and its data grids**, so there is **no separate native install**.
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'proj' (TYPE vgi, LOCATION 'uv run proj_worker.py');
+ATTACH 'proj' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-proj@v0.2.0 vgi-proj-worker');
 
 SELECT proj.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857'); -- STRUCT(x, y)
 SELECT proj.to_webmercator(-122.4194, 37.7749);                  -- STRUCT(x, y) metres
@@ -37,6 +37,39 @@ SELECT proj.crs_units('EPSG:3857');                              -- 'metre'
 The bundled PROJ and `pyproj` versions are exposed as catalog metadata (the
 `proj_library_version` / `pyproj_version` tags on the `proj` catalog), readable
 via `vgi_catalogs()` without running a query.
+
+## Quick start
+
+The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from a tagged release on GitHub. `uvx` builds an isolated environment on the first ATTACH and reuses it afterwards:
+
+```sql
+INSTALL vgi FROM community;
+LOAD vgi;
+
+ATTACH 'proj' AS proj (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-proj@v0.2.0 vgi-proj-worker');
+
+-- Transform a WGS84 lon/lat point to Web Mercator metres.
+SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857');
+
+-- Get the UTM zone number for a San Francisco lon/lat.
+SELECT proj.main.to_utm(-122.42, 37.77).zone;
+```
+
+Change `@v0.2.0` to move to a newer release.
+
+### Other ways to run it
+
+- **Docker** (the image bundles the worker and its dependencies):
+
+  ```sql
+  ATTACH 'proj' AS proj (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-proj:0.2.0');
+  ```
+
+- **From a local checkout** (`git clone https://github.com/Query-farm/vgi-proj`), point `LOCATION` at `uv run --project /path/to/vgi-proj vgi-proj-worker`.
+
+### Build from source
+
+To build and test the worker yourself from a checkout, see [Local development](#local-development).
 
 ## Axis order: always (x, y) = (lon/easting, lat/northing)
 
