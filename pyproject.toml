@@ -1,6 +1,6 @@
 [project]
 name = "vgi-proj"
-version = "0.2.0"
+version = "0.3.0"
 description = "CRS transforms + WGS84 geodesic distance for DuckDB via VGI (pyproj/PROJ)"
 readme = "README.md"
 keywords = [
