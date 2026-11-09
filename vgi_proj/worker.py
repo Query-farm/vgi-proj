@@ -151,7 +151,9 @@ _AGENT_TEST_TASKS = json.dumps(
 )
 
 _CATALOG_TAGS = {
-    "vgi.title": "CRS Transforms & Geodesic Geometry",
+    "vgi.title": "PROJ transforms",
+    # VGI148: one-sentence listing subtitle shown under the title.
+    "vgi.subtitle": "Reproject coordinates between CRSs and measure geodesic distances on the WGS84 ellipsoid.",
     "vgi.keywords": keywords_json(
         [
             "proj",
