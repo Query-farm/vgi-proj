@@ -21,7 +21,7 @@ and its data grids**, so there is **no separate native install**.
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'proj' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-proj@v0.3.0 vgi-proj-worker');
+ATTACH 'proj' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-proj@v0.4.0 vgi-proj-worker');
 
 SELECT proj.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857'); -- STRUCT(x, y)
 SELECT proj.to_webmercator(-122.4194, 37.7749);                  -- STRUCT(x, y) metres
@@ -46,7 +46,7 @@ The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from
 INSTALL vgi FROM community;
 LOAD vgi;
 
-ATTACH 'proj' AS proj (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-proj@v0.3.0 vgi-proj-worker');
+ATTACH 'proj' AS proj (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-proj@v0.4.0 vgi-proj-worker');
 
 -- Transform a WGS84 lon/lat point to Web Mercator metres.
 SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857');
@@ -55,14 +55,14 @@ SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857');
 SELECT proj.main.to_utm(-122.42, 37.77).zone;
 ```
 
-Change `@v0.3.0` to move to a newer release.
+Change `@v0.4.0` to move to a newer release.
 
 ### Other ways to run it
 
 - **Docker** (the image bundles the worker and its dependencies):
 
   ```sql
-  ATTACH 'proj' AS proj (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-proj:0.3.0');
+  ATTACH 'proj' AS proj (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-proj:0.4.0');
   ```
 
 - **From a local checkout** (`git clone https://github.com/Query-farm/vgi-proj`), point `LOCATION` at `uv run --project /path/to/vgi-proj vgi-proj-worker`.
