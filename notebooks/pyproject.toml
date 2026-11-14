@@ -3,7 +3,7 @@ name = "vgi-proj-notebooks"
 version = "0.2.0"
 description = "SQL comparisons of map distance, CRS units and WGS84 geodesics"
 requires-python = ">=3.11"
-dependencies = ["vgi-example-notebooks @ git+https://github.com/Query-farm/vgi-example-notebooks.git@v0.3.2"]
+dependencies = ["vgi-example-notebooks @ git+https://github.com/Query-farm/vgi-example-notebooks.git@v0.3.6"]
 
 [project.optional-dependencies]
 runner = ["vgi-example-notebooks[runner]"]

@@ -27,10 +27,10 @@
   "notebooks": [
     {
       "path": "01_when_a_map_ruler_lies.ipynb",
-      "sha256": "a3d26c1acae39aefee5a31cbf63b979ef8688bb0ae62ea1a329be73f06a1571a",
+      "sha256": "c5ce4cdb20294a0fdbdc76ab6dae9adfd185d8f566998d63a587c9248576bc37",
       "execution": {
         "path": "coverage/run-01.json",
-        "sha256": "08bec3cc5036e74a08abd4438b4ea18a265e9532dd18d9c3291ba3c34f561d1b"
+        "sha256": "102513559fd55d5a07854ded66f655a49a90e980cf0f3a7803cb19b57eb01929"
       }
     }
   ],
@@ -60,7 +60,7 @@
         "status": "approved",
         "reviewer": "Codex /root/notebooks_ortools",
         "reviewed_at": "2026-11-14T18:01:46.868919+00:00",
-        "notebook_sha256": "a3d26c1acae39aefee5a31cbf63b979ef8688bb0ae62ea1a329be73f06a1571a",
+        "notebook_sha256": "c5ce4cdb20294a0fdbdc76ab6dae9adfd185d8f566998d63a587c9248576bc37",
         "catalog_sha256": [
           "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6",
           "d55da515a852af09fcb8e0dd9e3f30350149bc353b22b36e195cc04102474094"
@@ -94,7 +94,7 @@
         "status": "approved",
         "reviewer": "Codex /root/notebooks_ortools",
         "reviewed_at": "2026-11-14T18:01:46.868919+00:00",
-        "notebook_sha256": "a3d26c1acae39aefee5a31cbf63b979ef8688bb0ae62ea1a329be73f06a1571a",
+        "notebook_sha256": "c5ce4cdb20294a0fdbdc76ab6dae9adfd185d8f566998d63a587c9248576bc37",
         "catalog_sha256": [
           "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6",
           "d55da515a852af09fcb8e0dd9e3f30350149bc353b22b36e195cc04102474094"
@@ -130,13 +130,13 @@
         "status": "approved",
         "reviewer": "Codex /root/notebooks_ortools",
         "reviewed_at": "2026-11-14T18:01:46.868919+00:00",
-        "notebook_sha256": "a3d26c1acae39aefee5a31cbf63b979ef8688bb0ae62ea1a329be73f06a1571a",
+        "notebook_sha256": "c5ce4cdb20294a0fdbdc76ab6dae9adfd185d8f566998d63a587c9248576bc37",
         "catalog_sha256": [
           "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6",
           "d55da515a852af09fcb8e0dd9e3f30350149bc353b22b36e195cc04102474094"
         ],
         "purpose": "Create an identical grid-metre ruler at each synthetic latitude.",
-        "finding": "Every projected endpoint pair is exactly 10,000 map metres, while the geodesic shrinks across latitude; at 45°N it is 7082.931 m."
+        "finding": "Every projected endpoint pair is exactly 10,000 map metres, while the geodesic shrinks across latitude; at 45\u00b0N it is 7082.931 m."
       }
     },
     {
@@ -165,7 +165,7 @@
         "status": "approved",
         "reviewer": "Codex /root/notebooks_ortools",
         "reviewed_at": "2026-11-14T18:01:46.868919+00:00",
-        "notebook_sha256": "a3d26c1acae39aefee5a31cbf63b979ef8688bb0ae62ea1a329be73f06a1571a",
+        "notebook_sha256": "c5ce4cdb20294a0fdbdc76ab6dae9adfd185d8f566998d63a587c9248576bc37",
         "catalog_sha256": [
           "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6",
           "d55da515a852af09fcb8e0dd9e3f30350149bc353b22b36e195cc04102474094"
@@ -200,13 +200,13 @@
         "status": "approved",
         "reviewer": "Codex /root/notebooks_ortools",
         "reviewed_at": "2026-11-14T18:01:46.868919+00:00",
-        "notebook_sha256": "a3d26c1acae39aefee5a31cbf63b979ef8688bb0ae62ea1a329be73f06a1571a",
+        "notebook_sha256": "c5ce4cdb20294a0fdbdc76ab6dae9adfd185d8f566998d63a587c9248576bc37",
         "catalog_sha256": [
           "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6",
           "d55da515a852af09fcb8e0dd9e3f30350149bc353b22b36e195cc04102474094"
         ],
         "purpose": "Use the WGS84 ellipsoid as the endpoint-distance reference.",
-        "finding": "The 45°N focus distance is 7.083 km, so the 10 km map ruler is 1.4118 times the geodesic. This is shortest ellipsoidal endpoint distance, not a road or terrain path."
+        "finding": "The 45\u00b0N focus distance is 7.083 km, so the 10 km map ruler is 1.4118 times the geodesic. This is shortest ellipsoidal endpoint distance, not a road or terrain path."
       }
     },
     {
@@ -234,13 +234,13 @@
         "status": "approved",
         "reviewer": "Codex /root/notebooks_ortools",
         "reviewed_at": "2026-11-14T18:01:46.868919+00:00",
-        "notebook_sha256": "a3d26c1acae39aefee5a31cbf63b979ef8688bb0ae62ea1a329be73f06a1571a",
+        "notebook_sha256": "c5ce4cdb20294a0fdbdc76ab6dae9adfd185d8f566998d63a587c9248576bc37",
         "catalog_sha256": [
           "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6",
           "d55da515a852af09fcb8e0dd9e3f30350149bc353b22b36e195cc04102474094"
         ],
         "purpose": "Distinguish initial geodesic direction from a horizontal map line.",
-        "finding": "At 45°N the initial bearing is 89.968240 degrees clockwise from north, 0.031760 degrees north of due east. Equal endpoint latitude does not enforce a constant 90-degree geodesic heading."
+        "finding": "At 45\u00b0N the initial bearing is 89.968240 degrees clockwise from north, 0.031760 degrees north of due east. Equal endpoint latitude does not enforce a constant 90-degree geodesic heading."
       }
     },
     {
@@ -270,13 +270,13 @@
         "status": "approved",
         "reviewer": "Codex /root/notebooks_ortools",
         "reviewed_at": "2026-11-14T18:01:46.868919+00:00",
-        "notebook_sha256": "a3d26c1acae39aefee5a31cbf63b979ef8688bb0ae62ea1a329be73f06a1571a",
+        "notebook_sha256": "c5ce4cdb20294a0fdbdc76ab6dae9adfd185d8f566998d63a587c9248576bc37",
         "catalog_sha256": [
           "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6",
           "d55da515a852af09fcb8e0dd9e3f30350149bc353b22b36e195cc04102474094"
         ],
         "purpose": "Compare a suitable local projection while retaining its returned CRS identifier.",
-        "finding": "Every automatic endpoint projection selects EPSG:32610; UTM focus distance 7080.099 m differs from the geodesic by −2.833 m (−0.03999%), much less than Web Mercator within this controlled short central-meridian experiment."
+        "finding": "Every automatic endpoint projection selects EPSG:32610; UTM focus distance 7080.099 m differs from the geodesic by \u22122.833 m (\u22120.03999%), much less than Web Mercator within this controlled short central-meridian experiment."
       }
     },
     {
@@ -305,13 +305,13 @@
         "status": "approved",
         "reviewer": "Codex /root/notebooks_ortools",
         "reviewed_at": "2026-11-14T18:01:46.868919+00:00",
-        "notebook_sha256": "a3d26c1acae39aefee5a31cbf63b979ef8688bb0ae62ea1a329be73f06a1571a",
+        "notebook_sha256": "c5ce4cdb20294a0fdbdc76ab6dae9adfd185d8f566998d63a587c9248576bc37",
         "catalog_sha256": [
           "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6",
           "d55da515a852af09fcb8e0dd9e3f30350149bc353b22b36e195cc04102474094"
         ],
         "purpose": "Measure endpoints in one explicitly chosen CRS using constant source/target arguments.",
-        "finding": "Explicit EPSG:4326→32610 transformation gives 7080.099 m at 45°N and exactly agrees with automatic UTM distances across the sweep, because all automatic target identifiers are 32610. General transform requires constant CRS identifiers, not per-row EPSG values."
+        "finding": "Explicit EPSG:4326\u219232610 transformation gives 7080.099 m at 45\u00b0N and exactly agrees with automatic UTM distances across the sweep, because all automatic target identifiers are 32610. General transform requires constant CRS identifiers, not per-row EPSG values."
       }
     }
   ]
