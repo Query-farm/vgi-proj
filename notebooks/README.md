@@ -67,8 +67,8 @@ notebook never subtracts automatic UTM coordinates with different returned EPSG
 identifiers. The general `transform` requires constant CRS identifiers; a per-row
 CRS column cannot replace them.
 
-The shared [standard](https://github.com/Query-farm/vgi-example-notebooks/blob/v0.3.6/docs/standard.md)
-and runner are pinned at **v0.3.6**, without copied presentation or execution helpers.
+The shared [standard](https://github.com/Query-farm/vgi-example-notebooks/blob/v0.3.8/docs/standard.md)
+and runner are pinned at **v0.3.8**, without copied presentation or execution helpers.
 Native SVG outputs also have content-addressed `charts/` assets for GitHub. Retain
 historical chart assets when updating examples. Experiment copies keep native SVG;
 invalid overrides and failed execution preserve the last successful default.
