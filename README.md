@@ -207,3 +207,7 @@ Written by [Query.Farm](https://query.farm).
 
 Copyright 2026 Query Farm LLC - https://query.farm
 
+
+## Notebooks
+
+See the [executed map-distance notebook](notebooks/README.md) for a SQL walkthrough of Web Mercator scale and local UTM distances.
