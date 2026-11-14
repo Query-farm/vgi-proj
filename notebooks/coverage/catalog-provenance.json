@@ -1,0 +1,20 @@
+{
+  "repository": "Query-farm/vgi-proj",
+  "released_tag": "v0.4.0",
+  "released_revision": "3d6e47ef4b91845dc9803f88006a6bac13f11cab",
+  "current_public_revision": "a8828f1bdeeb24cf5f8b027ee862ceb9d7f86b08",
+  "engine": "Haybarn 2.0.0rc11 / VGI e75482339d",
+  "released_launch": "uvx --python 3.13 --from git+https://github.com/Query-farm/vgi-proj@v0.4.0 vgi-proj-worker",
+  "release_dependencies": {
+    "vgi-proj": "0.4.0",
+    "vgi-python": "0.51.1",
+    "vgi-rpc": "0.53.1",
+    "pyarrow": "26.0.1",
+    "pyproj": "3.8.0"
+  },
+  "current_collection": "Separate installed current-public source from uv sync --locked --extra dev; notebook uses release Git-tag worker only.",
+  "current_root_lock_sha256": "8ef9f19082e8fb9b0c71bdb9019c9efef0688216de790be5c303dde8c4393467",
+  "comparison": "Full source diff from v0.4.0 to current public revision adds composed examples and clarifies constant CRS argument documentation; projection.py changes are docstrings. Function registration, argument/return schemas and domain logic are unchanged.",
+  "data_isolation": "Both catalog probes used a fresh TemporaryDirectory secret_directory, allow_persistent_secrets=False and an empty duckdb_secrets() inventory before ATTACH.",
+  "captured_at": "2026-11-14T18:01:46.868919+00:00"
+}

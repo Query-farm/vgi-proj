@@ -1,0 +1,371 @@
+{
+  "query": "SELECT * FROM duckdb_functions() WHERE database_name='proj'",
+  "columns": [
+    "database_name",
+    "database_oid",
+    "schema_name",
+    "function_name",
+    "alias_of",
+    "function_type",
+    "description",
+    "comment",
+    "tags",
+    "return_type",
+    "parameters",
+    "parameter_types",
+    "varargs",
+    "macro_definition",
+    "has_side_effects",
+    "internal",
+    "extension_name",
+    "function_oid",
+    "examples",
+    "stability",
+    "categories"
+  ],
+  "rows": [
+    [
+      "proj",
+      "22592",
+      "main",
+      "transform",
+      null,
+      "scalar",
+      "Transform (x, y) from from_crs to to_crs as STRUCT(x, y); always_xy axis order. NULL coord -> NULL; unknown CRS -> error",
+      null,
+      {
+        "vgi.category": "transform",
+        "vgi.doc_llm": "# transform\n\nReproject a single `(x, y)` coordinate pair from one coordinate reference system (CRS) to another, identified by **EPSG** code/string (e.g. `EPSG:4326` WGS84 lon/lat, `EPSG:3857` Web Mercator).\n\n**When to use:** any time you need to convert between map projections or geographic systems in SQL -- e.g. WGS84 lon/lat to a metric projection for distance/area work, or between two national grids.\n\n**Inputs:** `x` (longitude/easting in `from_crs`), `y` (latitude/northing in `from_crs`), `from_crs`, `to_crs`. The CRS arguments must be constants (folded at plan time); a per-row CRS column is a bind error.\n\n**Output:** `STRUCT(x DOUBLE, y DOUBLE)` in the target CRS.\n\n**Axis order:** always `always_xy` -- inputs/outputs are `(x/easting/longitude, y/northing/latitude)` regardless of the CRS's declared native axis order.\n\n**Edge cases:** a NULL or non-finite coordinate yields a NULL struct; an unknown/invalid CRS raises a clear query error.",
+        "vgi.doc_md": "## transform(x, y, from_crs, to_crs)\n\nGeneral CRS-to-CRS reprojection returning `STRUCT(x, y)` in the target system.\n\n### Usage\n\n```sql\nSELECT proj.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857');\n```\n\nIt can also be applied per row over a coordinate column, reading `.x` or `.y` off the returned struct.\n\n### Notes\n\n- Uses `always_xy` axis order: `(x/easting/longitude, y/northing/latitude)`.\n- NULL or non-finite coordinates produce a NULL struct.\n- An unknown CRS raises a DuckDB query error rather than crashing.",
+        "vgi.example_queries": "[{\"description\": \"WGS84 lon/lat to Web Mercator metres\", \"sql\": \"SELECT proj.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857')\"}, {\"description\": \"Reproject British National Grid (EPSG:27700) easting/northing sites to WGS84 lon/lat and rank them by geodesic distance from the London Eye (Cardiff Castle 212.6 km, York Minster 281.5 km, Edinburgh Castle 535.0 km).\", \"sql\": \"WITH eye AS (SELECT proj.main.transform(530600.0, 179700.0, 'EPSG:27700', 'EPSG:4326') AS o), sites(site, easting, northing) AS (VALUES ('Edinburgh Castle', 325160.0, 673490.0), ('Cardiff Castle', 318080.0, 176540.0), ('York Minster', 460350.0, 452230.0)), ll AS (SELECT site, proj.main.transform(easting, northing, 'EPSG:27700', 'EPSG:4326') AS p FROM sites) SELECT site, round(p.x, 4) AS lon, round(p.y, 4) AS lat, round(proj.main.geodesic_distance(o.x, o.y, p.x, p.y) / 1000, 1) AS km_from_london_eye FROM ll CROSS JOIN eye ORDER BY km_from_london_eye\"}]",
+        "vgi.executable_examples": "[{\"description\": \"Transform a WGS84 lon/lat point to Web Mercator metres.\", \"sql\": \"SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857') AS xy\"}, {\"description\": \"Project San Francisco into its UTM zone (10N).\", \"sql\": \"SELECT proj.main.to_utm(-122.42, 37.77) AS utm\"}, {\"description\": \"Convert a WGS84 point to Web Mercator via the shorthand.\", \"sql\": \"SELECT proj.main.to_webmercator(-122.4194, 37.7749) AS xy\"}, {\"description\": \"Round-trip Web Mercator metres back to lon/lat.\", \"sql\": \"SELECT proj.main.from_webmercator(-13627665.27, 4547675.35) AS lonlat\"}, {\"description\": \"Geodesic distance New York to London, in metres.\", \"sql\": \"SELECT proj.main.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074) AS m\"}, {\"description\": \"Initial geodesic bearing from New York toward London, degrees.\", \"sql\": \"SELECT proj.main.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074) AS deg\"}, {\"description\": \"Human-readable name of the WGS84 CRS.\", \"sql\": \"SELECT proj.main.crs_name('EPSG:4326') AS name\"}, {\"description\": \"Axis units of the Web Mercator CRS.\", \"sql\": \"SELECT proj.main.crs_units('EPSG:3857') AS units\"}, {\"description\": \"Measure the true ground length of segments stored in Web Mercator (EPSG:3857) metres by converting their endpoints back to lon/lat: the same 5,000 Mercator metres is ~5,000 m near the equator (Quito) but only ~2,513 m at Oslo (lat 59.9).\", \"sql\": \"WITH segments(segment, x1, y1, x2, y2) AS (VALUES ('Quito, 5 km east', -8738000.0, -24600.0, -8733000.0, -24600.0), ('Oslo, 5 km east', 1194000.0, 8381000.0, 1199000.0, 8381000.0)), ll AS (SELECT segment, x1, y1, x2, y2, proj.main.from_webmercator(x1, y1) AS a, proj.main.from_webmercator(x2, y2) AS b FROM segments) SELECT segment, round(a.lat, 2) AS lat, round(sqrt(power(x2 - x1, 2) + power(y2 - y1, 2))) AS mercator_m, round(proj.main.geodesic_distance(a.lon, a.lat, b.lon, b.lat)) AS geodesic_m FROM ll ORDER BY segment\"}, {\"description\": \"Distance (km) and initial compass bearing (degrees) from New York to five world cities, nearest first (London 5,585 km at 51 deg ... Sydney 15,988 km at 266 deg).\", \"sql\": \"WITH destinations(city, lon, lat) AS (VALUES ('London', -0.1276, 51.5074), ('Paris', 2.3522, 48.8566), ('Tokyo', 139.6917, 35.6895), ('Sydney', 151.2093, -33.8688), ('Sao Paulo', -46.6333, -23.5505)) SELECT city, round(proj.main.geodesic_distance(-74.006, 40.7128, lon, lat) / 1000) AS distance_km, round(proj.main.geodesic_bearing(-74.006, 40.7128, lon, lat)) AS initial_bearing_deg FROM destinations ORDER BY distance_km\"}]",
+        "vgi.keywords": "[\"transform\", \"reproject\", \"projection\", \"coordinate transform\", \"crs\", \"epsg\", \"wgs84\", \"web mercator\", \"4326\", \"3857\", \"convert coordinates\", \"map projection\"]",
+        "vgi.title": "Transform Coordinates Between CRSs"
+      },
+      "STRUCT(x DOUBLE, y DOUBLE)",
+      [
+        "x",
+        "y",
+        "from_crs",
+        "to_crs"
+      ],
+      [
+        "DOUBLE",
+        "DOUBLE",
+        "VARCHAR",
+        "VARCHAR"
+      ],
+      null,
+      null,
+      false,
+      true,
+      null,
+      22603,
+      [
+        "SELECT proj.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857')",
+        "WITH eye AS (SELECT proj.main.transform(530600.0, 179700.0, 'EPSG:27700', 'EPSG:4326') AS o), sites(site, easting, northing) AS (VALUES ('Edinburgh Castle', 325160.0, 673490.0), ('Cardiff Castle', 318080.0, 176540.0), ('York Minster', 460350.0, 452230.0)), ll AS (SELECT site, proj.main.transform(easting, northing, 'EPSG:27700', 'EPSG:4326') AS p FROM sites) SELECT site, round(p.x, 4) AS lon, round(p.y, 4) AS lat, round(proj.main.geodesic_distance(o.x, o.y, p.x, p.y) / 1000, 1) AS km_from_london_eye FROM ll CROSS JOIN eye ORDER BY km_from_london_eye"
+      ],
+      "CONSISTENT",
+      [
+        "proj",
+        "transform"
+      ]
+    ],
+    [
+      "proj",
+      "22592",
+      "main",
+      "crs_name",
+      null,
+      "scalar",
+      "Human-readable name of a CRS (e.g. 'WGS 84'); unknown CRS -> error",
+      null,
+      {
+        "vgi.category": "crs",
+        "vgi.doc_llm": "# crs_name\n\nReturn the **human-readable name** of a CRS -- e.g. `'WGS 84'` for `EPSG:4326` or `'WGS 84 / Pseudo-Mercator'` for `EPSG:3857`.\n\n**When to use:** to label, audit, or display CRS codes in a user-friendly way, or to confirm that a code resolves to the CRS you expect.\n\n**Inputs:** `crs` -- an EPSG code/string (e.g. `'EPSG:4326'`).\n\n**Output:** the CRS name as `VARCHAR`.\n\n**Edge cases:** NULL input yields NULL; an unknown/invalid CRS raises a clear query error.",
+        "vgi.doc_md": "## crs_name(crs)\n\nReturn the official human-readable name of a coordinate reference system.\n\n### Usage\n\n```sql\nSELECT proj.crs_name('EPSG:4326');  -- 'WGS 84'\nSELECT proj.crs_name('EPSG:3857');  -- 'WGS 84 / Pseudo-Mercator'\n```\n\n### Notes\n\n- Useful for labelling CRS codes in reports and UIs.\n- NULL input yields NULL; an unknown CRS raises a query error.",
+        "vgi.example_queries": "[{\"description\": \"Name of WGS84 ('WGS 84')\", \"sql\": \"SELECT proj.crs_name('EPSG:4326')\"}]",
+        "vgi.keywords": "[\"crs name\", \"projection name\", \"epsg name\", \"wgs 84\", \"describe crs\", \"lookup crs\", \"identify projection\", \"coordinate system name\"]",
+        "vgi.title": "Look Up CRS Display Name"
+      },
+      "VARCHAR",
+      [
+        "crs"
+      ],
+      [
+        "VARCHAR"
+      ],
+      null,
+      null,
+      false,
+      true,
+      null,
+      22596,
+      [
+        "SELECT proj.crs_name('EPSG:4326')"
+      ],
+      "CONSISTENT",
+      [
+        "proj",
+        "crs"
+      ]
+    ],
+    [
+      "proj",
+      "22592",
+      "main",
+      "to_webmercator",
+      null,
+      "scalar",
+      "WGS84 (lon, lat) -> Web Mercator STRUCT(x, y) in metres (EPSG:4326->3857)",
+      null,
+      {
+        "vgi.category": "webmercator",
+        "vgi.doc_llm": "# to_webmercator\n\nShorthand for the most common reprojection: WGS84 `(lon, lat)` (`EPSG:4326`) to **Web Mercator** `(x, y)` metres (`EPSG:3857`), the CRS used by web map tiles (Google/OSM/Mapbox slippy maps).\n\n**When to use:** to place lon/lat points onto a web map or tile grid, or whenever you need the Web Mercator metric coordinate without spelling out the EPSG codes.\n\n**Inputs:** `lon`, `lat` in WGS84 degrees.\n\n**Output:** `STRUCT(x DOUBLE, y DOUBLE)` in Web Mercator metres.\n\n**Edge cases:** NULL/non-finite input yields a NULL struct. Web Mercator is undefined near the poles (|lat| ~> 85.06 deg), where values grow unbounded -- this is a property of the projection, not an error.",
+        "vgi.doc_md": "## to_webmercator(lon, lat)\n\nConvenience wrapper for `transform(lon, lat, 'EPSG:4326', 'EPSG:3857')`, returning `STRUCT(x, y)` in Web Mercator metres.\n\n### Usage\n\n```sql\nSELECT proj.to_webmercator(-122.4194, 37.7749);\n```\n\nIt can also be applied per row over a lon/lat column, reading `.x` or `.y` off the returned struct.\n\n### Notes\n\n- Equivalent to a `transform` call into `EPSG:3857`, with `always_xy` axis order.\n- The projection is undefined near the poles; expect very large values above ~85.06 degrees latitude.\n- NULL or non-finite coordinates produce a NULL struct.",
+        "vgi.example_queries": "[{\"description\": \"San Francisco in Web Mercator metres\", \"sql\": \"SELECT proj.to_webmercator(-122.4194, 37.7749)\"}]",
+        "vgi.keywords": "[\"web mercator\", \"webmercator\", \"3857\", \"4326\", \"tiles\", \"slippy map\", \"google maps\", \"openstreetmap\", \"project\", \"wgs84 to mercator\"]",
+        "vgi.title": "Convert to Web Mercator"
+      },
+      "STRUCT(x DOUBLE, y DOUBLE)",
+      [
+        "lon",
+        "lat"
+      ],
+      [
+        "DOUBLE",
+        "DOUBLE"
+      ],
+      null,
+      null,
+      false,
+      true,
+      null,
+      22602,
+      [
+        "SELECT proj.to_webmercator(-122.4194, 37.7749)"
+      ],
+      "CONSISTENT",
+      [
+        "proj",
+        "webmercator"
+      ]
+    ],
+    [
+      "proj",
+      "22592",
+      "main",
+      "crs_units",
+      null,
+      "scalar",
+      "Unit name of a CRS's first axis (e.g. 'degree', 'metre'); unknown CRS -> error",
+      null,
+      {
+        "vgi.category": "crs",
+        "vgi.doc_llm": "# crs_units\n\nReturn the **unit name of a CRS's first axis** -- e.g. `'degree'` for a geographic CRS like `EPSG:4326`, or `'metre'` for a projected CRS like `EPSG:3857`.\n\n**When to use:** to discover whether a CRS is angular (degrees) or linear (metres/feet) before deciding how to interpret or transform its coordinates.\n\n**Inputs:** `crs` -- an EPSG code/string (e.g. `'EPSG:3857'`).\n\n**Output:** the axis unit name as `VARCHAR`.\n\n**Edge cases:** NULL input yields NULL; an unknown/invalid CRS raises a clear query error.",
+        "vgi.doc_md": "## crs_units(crs)\n\nReturn the unit of measure of a CRS's first axis (e.g. `degree`, `metre`).\n\n### Usage\n\n```sql\nSELECT proj.crs_units('EPSG:3857');  -- 'metre'\nSELECT proj.crs_units('EPSG:4326');  -- 'degree'\n```\n\n### Notes\n\n- Tells you whether a CRS is angular or linear.\n- NULL input yields NULL; an unknown CRS raises a query error.",
+        "vgi.example_queries": "[{\"description\": \"Units of Web Mercator ('metre')\", \"sql\": \"SELECT proj.crs_units('EPSG:3857')\"}]",
+        "vgi.keywords": "[\"crs units\", \"axis units\", \"degree\", \"metre\", \"meter\", \"foot\", \"unit of measure\", \"epsg\", \"projection units\", \"angular\", \"linear\"]",
+        "vgi.title": "Look Up CRS Axis Units"
+      },
+      "VARCHAR",
+      [
+        "crs"
+      ],
+      [
+        "VARCHAR"
+      ],
+      null,
+      null,
+      false,
+      true,
+      null,
+      22597,
+      [
+        "SELECT proj.crs_units('EPSG:3857')"
+      ],
+      "CONSISTENT",
+      [
+        "proj",
+        "crs"
+      ]
+    ],
+    [
+      "proj",
+      "22592",
+      "main",
+      "from_webmercator",
+      null,
+      "scalar",
+      "Web Mercator (x, y) metres -> WGS84 STRUCT(lon, lat) (EPSG:3857->4326)",
+      null,
+      {
+        "vgi.category": "webmercator",
+        "vgi.doc_llm": "# from_webmercator\n\nInverse of `to_webmercator`: convert **Web Mercator** `(x, y)` metres (`EPSG:3857`) back to WGS84 `(lon, lat)` degrees (`EPSG:4326`).\n\n**When to use:** to turn tile/pixel-derived Web Mercator coordinates back into geographic lon/lat, e.g. after reading map-tile geometry.\n\n**Inputs:** `x` (easting metres), `y` (northing metres).\n\n**Output:** `STRUCT(lon DOUBLE, lat DOUBLE)` in WGS84 degrees.\n\n**Edge cases:** NULL/non-finite input yields a NULL struct. This pairs exactly with `to_webmercator` for a round-trip.",
+        "vgi.doc_md": "## from_webmercator(x, y)\n\nConvenience wrapper for `transform(x, y, 'EPSG:3857', 'EPSG:4326')`, returning `STRUCT(lon, lat)` in WGS84 degrees.\n\n### Usage\n\n```sql\nSELECT proj.from_webmercator(-13627665.27, 4547675.35);\n```\n\nIt can also be applied per row over an easting/northing column, reading `.lon` or `.lat` off the returned struct.\n\n### Notes\n\n- Inverse of `to_webmercator`; round-trips back to the original lon/lat (within PROJ precision).\n- Uses `always_xy` axis order.\n- NULL or non-finite coordinates produce a NULL struct.",
+        "vgi.example_queries": "[{\"description\": \"Web Mercator metres back to San Francisco lon/lat\", \"sql\": \"SELECT proj.from_webmercator(-13627665.27, 4547675.35)\"}, {\"description\": \"Measure the true ground length of segments stored in Web Mercator (EPSG:3857) metres by converting their endpoints back to lon/lat: the same 5,000 Mercator metres is ~5,000 m near the equator (Quito) but only ~2,513 m at Oslo (lat 59.9).\", \"sql\": \"WITH segments(segment, x1, y1, x2, y2) AS (VALUES ('Quito, 5 km east', -8738000.0, -24600.0, -8733000.0, -24600.0), ('Oslo, 5 km east', 1194000.0, 8381000.0, 1199000.0, 8381000.0)), ll AS (SELECT segment, x1, y1, x2, y2, proj.main.from_webmercator(x1, y1) AS a, proj.main.from_webmercator(x2, y2) AS b FROM segments) SELECT segment, round(a.lat, 2) AS lat, round(sqrt(power(x2 - x1, 2) + power(y2 - y1, 2))) AS mercator_m, round(proj.main.geodesic_distance(a.lon, a.lat, b.lon, b.lat)) AS geodesic_m FROM ll ORDER BY segment\"}]",
+        "vgi.keywords": "[\"web mercator\", \"webmercator\", \"3857\", \"4326\", \"inverse\", \"unproject\", \"tiles\", \"mercator to lonlat\", \"lon lat\", \"wgs84\"]",
+        "vgi.title": "Convert From Web Mercator"
+      },
+      "STRUCT(lon DOUBLE, lat DOUBLE)",
+      [
+        "x",
+        "y"
+      ],
+      [
+        "DOUBLE",
+        "DOUBLE"
+      ],
+      null,
+      null,
+      false,
+      true,
+      null,
+      22598,
+      [
+        "SELECT proj.from_webmercator(-13627665.27, 4547675.35)",
+        "WITH segments(segment, x1, y1, x2, y2) AS (VALUES ('Quito, 5 km east', -8738000.0, -24600.0, -8733000.0, -24600.0), ('Oslo, 5 km east', 1194000.0, 8381000.0, 1199000.0, 8381000.0)), ll AS (SELECT segment, x1, y1, x2, y2, proj.main.from_webmercator(x1, y1) AS a, proj.main.from_webmercator(x2, y2) AS b FROM segments) SELECT segment, round(a.lat, 2) AS lat, round(sqrt(power(x2 - x1, 2) + power(y2 - y1, 2))) AS mercator_m, round(proj.main.geodesic_distance(a.lon, a.lat, b.lon, b.lat)) AS geodesic_m FROM ll ORDER BY segment"
+      ],
+      "CONSISTENT",
+      [
+        "proj",
+        "webmercator"
+      ]
+    ],
+    [
+      "proj",
+      "22592",
+      "main",
+      "geodesic_distance",
+      null,
+      "scalar",
+      "Accurate ellipsoidal (WGS84) geodesic distance between two points, in metres",
+      null,
+      {
+        "vgi.category": "geodesic",
+        "vgi.doc_llm": "# geodesic_distance\n\nCompute the **accurate ellipsoidal (WGS84) geodesic distance** in metres between two `(lon, lat)` points. Unlike a spherical haversine, this uses the WGS84 ellipsoid (via PROJ's `Geod`), so it is correct to the metre over global distances.\n\n**When to use:** for true great-circle / shortest-path distances on Earth -- routing, proximity filters, nearest-neighbour queries -- where accuracy matters more than a flat-plane approximation.\n\n**Inputs:** `lon1, lat1` (point 1) and `lon2, lat2` (point 2) in degrees.\n\n**Output:** distance in metres (`DOUBLE`).\n\n**Edge cases:** any NULL/non-finite or out-of-range coordinate (`|lat| > 90` / `|lon| > 180`) yields NULL. The result is ~0.3% different from a spherical haversine because it is ellipsoidal.",
+        "vgi.doc_md": "## geodesic_distance(lon1, lat1, lon2, lat2)\n\nAccurate WGS84-ellipsoid geodesic distance, in metres, between two geographic points.\n\n### Usage\n\n```sql\nSELECT proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074);\n```\n\nIt is often used in a predicate over a table of points -- for example to keep only rows within a given number of metres of a reference location.\n\n### Notes\n\n- Ellipsoidal (WGS84), so it differs from spherical haversine by ~0.3%.\n- NULL, non-finite, or out-of-range coordinates yield NULL.\n- Returns metres regardless of input units (inputs are always degrees).",
+        "vgi.example_queries": "[{\"description\": \"New York to London (~5,585,000 m)\", \"sql\": \"SELECT proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074)\"}, {\"description\": \"Distance (km) and initial compass bearing (degrees) from New York to five world cities, nearest first (London 5,585 km at 51 deg ... Sydney 15,988 km at 266 deg).\", \"sql\": \"WITH destinations(city, lon, lat) AS (VALUES ('London', -0.1276, 51.5074), ('Paris', 2.3522, 48.8566), ('Tokyo', 139.6917, 35.6895), ('Sydney', 151.2093, -33.8688), ('Sao Paulo', -46.6333, -23.5505)) SELECT city, round(proj.main.geodesic_distance(-74.006, 40.7128, lon, lat) / 1000) AS distance_km, round(proj.main.geodesic_bearing(-74.006, 40.7128, lon, lat)) AS initial_bearing_deg FROM destinations ORDER BY distance_km\"}]",
+        "vgi.keywords": "[\"geodesic\", \"distance\", \"great circle\", \"haversine\", \"ellipsoid\", \"wgs84\", \"meters\", \"metres\", \"proximity\", \"nearest\", \"how far\", \"geod\"]",
+        "vgi.title": "Geodesic Distance Between Points"
+      },
+      "DOUBLE",
+      [
+        "lon1",
+        "lat1",
+        "lon2",
+        "lat2"
+      ],
+      [
+        "DOUBLE",
+        "DOUBLE",
+        "DOUBLE",
+        "DOUBLE"
+      ],
+      null,
+      null,
+      false,
+      true,
+      null,
+      22600,
+      [
+        "SELECT proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074)",
+        "WITH destinations(city, lon, lat) AS (VALUES ('London', -0.1276, 51.5074), ('Paris', 2.3522, 48.8566), ('Tokyo', 139.6917, 35.6895), ('Sydney', 151.2093, -33.8688), ('Sao Paulo', -46.6333, -23.5505)) SELECT city, round(proj.main.geodesic_distance(-74.006, 40.7128, lon, lat) / 1000) AS distance_km, round(proj.main.geodesic_bearing(-74.006, 40.7128, lon, lat)) AS initial_bearing_deg FROM destinations ORDER BY distance_km"
+      ],
+      "CONSISTENT",
+      [
+        "proj",
+        "distance"
+      ]
+    ],
+    [
+      "proj",
+      "22592",
+      "main",
+      "geodesic_bearing",
+      null,
+      "scalar",
+      "Initial geodesic bearing (forward azimuth) from point 1 to point 2, degrees [0,360)",
+      null,
+      {
+        "vgi.category": "geodesic",
+        "vgi.doc_llm": "# geodesic_bearing\n\nCompute the **initial geodesic bearing** (forward azimuth) in degrees from point 1 toward point 2 on the WGS84 ellipsoid, normalized to `[0, 360)` where 0 = north, 90 = east.\n\n**When to use:** to find the compass direction to travel from one location to another along the shortest path -- navigation, heading indicators, directional filters.\n\n**Inputs:** `lon1, lat1` (origin) and `lon2, lat2` (destination) in degrees.\n\n**Output:** initial forward azimuth in degrees, `[0, 360)` (`DOUBLE`).\n\n**Edge cases:** NULL/non-finite or out-of-range coordinates yield NULL. It is the *initial* bearing -- along a geodesic the bearing changes continuously, so the arrival bearing differs from this value.",
+        "vgi.doc_md": "## geodesic_bearing(lon1, lat1, lon2, lat2)\n\nInitial forward azimuth (compass heading) in degrees `[0, 360)` from point 1 toward point 2 on the WGS84 ellipsoid.\n\n### Usage\n\n```sql\nSELECT proj.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074);\n```\n\nIt can also be applied per row over origin/destination columns to derive a heading for each leg of a route.\n\n### Notes\n\n- 0 deg = north, 90 deg = east; result is normalized to `[0, 360)`.\n- This is the *initial* bearing; along a geodesic it changes en route.\n- NULL, non-finite, or out-of-range coordinates yield NULL.",
+        "vgi.example_queries": "[{\"description\": \"Initial bearing from New York toward London\", \"sql\": \"SELECT proj.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074)\"}, {\"description\": \"Distance (km) and initial compass bearing (degrees) from New York to five world cities, nearest first (London 5,585 km at 51 deg ... Sydney 15,988 km at 266 deg).\", \"sql\": \"WITH destinations(city, lon, lat) AS (VALUES ('London', -0.1276, 51.5074), ('Paris', 2.3522, 48.8566), ('Tokyo', 139.6917, 35.6895), ('Sydney', 151.2093, -33.8688), ('Sao Paulo', -46.6333, -23.5505)) SELECT city, round(proj.main.geodesic_distance(-74.006, 40.7128, lon, lat) / 1000) AS distance_km, round(proj.main.geodesic_bearing(-74.006, 40.7128, lon, lat)) AS initial_bearing_deg FROM destinations ORDER BY distance_km\"}]",
+        "vgi.keywords": "[\"bearing\", \"azimuth\", \"heading\", \"direction\", \"compass\", \"geodesic\", \"forward azimuth\", \"navigation\", \"which way\", \"degrees\", \"wgs84\"]",
+        "vgi.title": "Geodesic Initial Bearing"
+      },
+      "DOUBLE",
+      [
+        "lon1",
+        "lat1",
+        "lon2",
+        "lat2"
+      ],
+      [
+        "DOUBLE",
+        "DOUBLE",
+        "DOUBLE",
+        "DOUBLE"
+      ],
+      null,
+      null,
+      false,
+      true,
+      null,
+      22599,
+      [
+        "SELECT proj.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074)",
+        "WITH destinations(city, lon, lat) AS (VALUES ('London', -0.1276, 51.5074), ('Paris', 2.3522, 48.8566), ('Tokyo', 139.6917, 35.6895), ('Sydney', 151.2093, -33.8688), ('Sao Paulo', -46.6333, -23.5505)) SELECT city, round(proj.main.geodesic_distance(-74.006, 40.7128, lon, lat) / 1000) AS distance_km, round(proj.main.geodesic_bearing(-74.006, 40.7128, lon, lat)) AS initial_bearing_deg FROM destinations ORDER BY distance_km"
+      ],
+      "CONSISTENT",
+      [
+        "proj",
+        "distance"
+      ]
+    ],
+    [
+      "proj",
+      "22592",
+      "main",
+      "to_utm",
+      null,
+      "scalar",
+      "Project WGS84 (lon, lat) into its auto-selected UTM zone as STRUCT(easting, northing, zone, hemisphere, epsg); NULL/out-of-range -> NULL",
+      null,
+      {
+        "vgi.category": "utm",
+        "vgi.doc_llm": "# to_utm\n\nProject a WGS84 `(lon, lat)` point into its **auto-selected** Universal Transverse Mercator (UTM) zone, returning the easting/northing in metres plus the chosen zone and hemisphere.\n\n**When to use:** when you want a locally-accurate metric coordinate for a point without picking the zone yourself -- ideal for measuring distances or areas in metres near a single location.\n\n**Inputs:** `lon` (-180..180 degrees), `lat` (-90..90 degrees).\n\n**Output:** `STRUCT(easting DOUBLE, northing DOUBLE, zone INT32, hemisphere VARCHAR, epsg INT32)`; `hemisphere` is `'N'` or `'S'`, and `epsg` is the target UTM CRS's EPSG code (`326xx` north / `327xx` south) which you can use as a constant `transform` CRS (e.g. `'EPSG:32610'`; `transform`'s CRS arguments must be constants, so it cannot be passed per row). The zone is derived from the longitude (`floor(lon/6)+31`).\n\n**Edge cases:** NULL, non-finite, or out-of-range (`|lat| > 90` / `|lon| > 180`) coordinates yield a NULL struct.",
+        "vgi.doc_md": "## to_utm(lon, lat)\n\nProject WGS84 lon/lat into the point's automatically-selected UTM zone.\n\n### Usage\n\n```sql\nSELECT proj.to_utm(-122.42, 37.77);        -- full struct\nSELECT proj.to_utm(-122.42, 37.77).zone;   -- 10\n```\n\nIt can also be applied per row over a lon/lat column, reading `.easting`, `.northing`, `.zone`, `.hemisphere`, or `.epsg` off the returned struct.\n\n### Notes\n\n- Returns `STRUCT(easting, northing, zone, hemisphere, epsg)` with metres for easting/northing.\n- The zone is chosen from the longitude; the hemisphere is `'N'`/`'S'`.\n- `epsg` is the target UTM CRS code (`326xx`/`327xx`) \u2014 use it as a constant `transform` CRS (e.g. `'EPSG:32610'`) to reproject in or out of that zone; `transform`'s CRS arguments must be constants, not per-row columns.\n- Out-of-range or NULL coordinates produce a NULL struct.",
+        "vgi.example_queries": "[{\"description\": \"UTM for San Francisco (zone 10N)\", \"sql\": \"SELECT proj.to_utm(-122.42, 37.77)\"}, {\"description\": \"UTM zone number for San Francisco (10)\", \"sql\": \"SELECT proj.to_utm(-122.42, 37.77).zone\"}, {\"description\": \"Check straight-line UTM grid distances against the true WGS84 geodesic distance for three San Francisco survey segments (all in UTM zone 10): the grid figure runs 2.4-3.0 m short over these 6.6-7.9 km segments because of UTM's scale factor near the central meridian.\", \"sql\": \"WITH segments(segment, lon1, lat1, lon2, lat2) AS (VALUES ('Ferry Building -> Golden Gate Bridge', -122.3937, 37.7955, -122.4783, 37.8199), ('Ferry Building -> Twin Peaks', -122.3937, 37.7955, -122.4477, 37.7544), ('Twin Peaks -> Golden Gate Bridge', -122.4477, 37.7544, -122.4783, 37.8199)), u AS (SELECT segment, lon1, lat1, lon2, lat2, proj.main.to_utm(lon1, lat1) AS a, proj.main.to_utm(lon2, lat2) AS b FROM segments) SELECT segment, a.zone AS utm_zone, round(sqrt(power(b.easting - a.easting, 2) + power(b.northing - a.northing, 2)), 1) AS utm_grid_m, round(proj.main.geodesic_distance(lon1, lat1, lon2, lat2), 1) AS geodesic_m FROM u ORDER BY segment\"}]",
+        "vgi.keywords": "[\"utm\", \"universal transverse mercator\", \"zone\", \"easting\", \"northing\", \"hemisphere\", \"project\", \"metric coordinates\", \"wgs84\", \"grid\"]",
+        "vgi.title": "Project to UTM Zone"
+      },
+      "STRUCT(easting DOUBLE, northing DOUBLE, \"zone\" INTEGER, hemisphere VARCHAR, epsg INTEGER)",
+      [
+        "lon",
+        "lat"
+      ],
+      [
+        "DOUBLE",
+        "DOUBLE"
+      ],
+      null,
+      null,
+      false,
+      true,
+      null,
+      22601,
+      [
+        "SELECT proj.to_utm(-122.42, 37.77)",
+        "SELECT proj.to_utm(-122.42, 37.77).zone",
+        "WITH segments(segment, lon1, lat1, lon2, lat2) AS (VALUES ('Ferry Building -> Golden Gate Bridge', -122.3937, 37.7955, -122.4783, 37.8199), ('Ferry Building -> Twin Peaks', -122.3937, 37.7955, -122.4477, 37.7544), ('Twin Peaks -> Golden Gate Bridge', -122.4477, 37.7544, -122.4783, 37.8199)), u AS (SELECT segment, lon1, lat1, lon2, lat2, proj.main.to_utm(lon1, lat1) AS a, proj.main.to_utm(lon2, lat2) AS b FROM segments) SELECT segment, a.zone AS utm_zone, round(sqrt(power(b.easting - a.easting, 2) + power(b.northing - a.northing, 2)), 1) AS utm_grid_m, round(proj.main.geodesic_distance(lon1, lat1, lon2, lat2), 1) AS geodesic_m FROM u ORDER BY segment"
+      ],
+      "CONSISTENT",
+      [
+        "proj",
+        "utm"
+      ]
+    ]
+  ]
+}

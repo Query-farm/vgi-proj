@@ -1,0 +1,588 @@
+{
+  "schema_version": 1,
+  "status": "met",
+  "meets_target": true,
+  "catalogs": {
+    "released": {
+      "catalog_status": "verified",
+      "revision": "v0.4.0",
+      "catalog_sha256": "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6",
+      "collection_reconciled": true,
+      "denominator": 8,
+      "observed_objects": 8,
+      "required": 8,
+      "verified_count": 8,
+      "candidate_count": 0,
+      "fraction": 1.0,
+      "meets_target": true,
+      "exact_runtime_count": 8,
+      "runtime_revisions": [
+        "v0.4.0"
+      ],
+      "covered": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "crs_name"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "crs_units"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "from_webmercator"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "geodesic_bearing"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "geodesic_distance"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "to_utm"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "to_webmercator"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "transform"
+        }
+      ],
+      "uncovered": [],
+      "objects": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "crs_name",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "crs_name(crs VARCHAR) -> VARCHAR"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "crs_units",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "crs_units(crs VARCHAR) -> VARCHAR"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "from_webmercator",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "from_webmercator(x DOUBLE, y DOUBLE) -> STRUCT(lon DOUBLE, lat DOUBLE)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "geodesic_bearing",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "geodesic_bearing(lon1 DOUBLE, lat1 DOUBLE, lon2 DOUBLE, lat2 DOUBLE) -> DOUBLE"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "geodesic_distance",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "geodesic_distance(lon1 DOUBLE, lat1 DOUBLE, lon2 DOUBLE, lat2 DOUBLE) -> DOUBLE"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "to_utm",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "to_utm(lon DOUBLE, lat DOUBLE) -> STRUCT(easting DOUBLE, northing DOUBLE, \"zone\" INTEGER, hemisphere VARCHAR, epsg INTEGER)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "to_webmercator",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "to_webmercator(lon DOUBLE, lat DOUBLE) -> STRUCT(x DOUBLE, y DOUBLE)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "transform",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "transform(x DOUBLE, y DOUBLE, from_crs VARCHAR, to_crs VARCHAR) -> STRUCT(x DOUBLE, y DOUBLE)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        }
+      ],
+      "issues": []
+    },
+    "current": {
+      "catalog_status": "verified",
+      "revision": "a8828f1bdeeb24cf5f8b027ee862ceb9d7f86b08",
+      "catalog_sha256": "d55da515a852af09fcb8e0dd9e3f30350149bc353b22b36e195cc04102474094",
+      "collection_reconciled": true,
+      "denominator": 8,
+      "observed_objects": 8,
+      "required": 8,
+      "verified_count": 8,
+      "candidate_count": 0,
+      "fraction": 1.0,
+      "meets_target": true,
+      "exact_runtime_count": 0,
+      "runtime_revisions": [
+        "v0.4.0"
+      ],
+      "covered": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "crs_name"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "crs_units"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "from_webmercator"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "geodesic_bearing"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "geodesic_distance"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "to_utm"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "to_webmercator"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "transform"
+        }
+      ],
+      "uncovered": [],
+      "objects": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "crs_name",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "crs_name(crs VARCHAR) -> VARCHAR"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "crs_units",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "crs_units(crs VARCHAR) -> VARCHAR"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "from_webmercator",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "from_webmercator(x DOUBLE, y DOUBLE) -> STRUCT(lon DOUBLE, lat DOUBLE)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "geodesic_bearing",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "geodesic_bearing(lon1 DOUBLE, lat1 DOUBLE, lon2 DOUBLE, lat2 DOUBLE) -> DOUBLE"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "geodesic_distance",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "geodesic_distance(lon1 DOUBLE, lat1 DOUBLE, lon2 DOUBLE, lat2 DOUBLE) -> DOUBLE"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "to_utm",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "to_utm(lon DOUBLE, lat DOUBLE) -> STRUCT(easting DOUBLE, northing DOUBLE, \"zone\" INTEGER, hemisphere VARCHAR, epsg INTEGER)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "to_webmercator",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "to_webmercator(lon DOUBLE, lat DOUBLE) -> STRUCT(x DOUBLE, y DOUBLE)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "transform",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "transform(x DOUBLE, y DOUBLE, from_crs VARCHAR, to_crs VARCHAR) -> STRUCT(x DOUBLE, y DOUBLE)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        }
+      ],
+      "issues": []
+    }
+  },
+  "interface_drift": {
+    "known": true,
+    "current_only": [],
+    "released_only": [],
+    "changed": []
+  },
+  "notebooks": {
+    "01_when_a_map_ruler_lies.ipynb": {
+      "verified": true,
+      "issues": []
+    }
+  },
+  "examples": [
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "crs_name"
+      },
+      "notebook": "01_when_a_map_ruler_lies.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "crs_units"
+      },
+      "notebook": "01_when_a_map_ruler_lies.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "to_webmercator"
+      },
+      "notebook": "01_when_a_map_ruler_lies.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "from_webmercator"
+      },
+      "notebook": "01_when_a_map_ruler_lies.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "geodesic_distance"
+      },
+      "notebook": "01_when_a_map_ruler_lies.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "geodesic_bearing"
+      },
+      "notebook": "01_when_a_map_ruler_lies.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "to_utm"
+      },
+      "notebook": "01_when_a_map_ruler_lies.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "transform"
+      },
+      "notebook": "01_when_a_map_ruler_lies.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "4c15536f342efbdc9b4c71e80cab0f7658d9b6bd7ef536ea8d64a345e83d92c6"
+    }
+  ],
+  "issues": []
+}

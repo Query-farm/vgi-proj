@@ -230,4 +230,4 @@ Copyright 2026 Query Farm LLC - https://query.farm
 
 ## Notebooks
 
-See the [executed map-distance notebook](notebooks/README.md) for a SQL walkthrough of Web Mercator scale and local UTM distances.
+See the [executed map-distance notebook](notebooks/README.md) for a SQL walkthrough of Web Mercator scale, geodesic bearings, CRS contracts and local UTM distances across all eight public functions.

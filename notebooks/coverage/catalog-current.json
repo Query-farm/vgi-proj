@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "repository": "Query-farm/vgi-proj",
+  "revision": "a8828f1bdeeb24cf5f8b027ee862ceb9d7f86b08",
+  "captured_at": "2026-11-14T18:01:46.868919+00:00",
+  "default_schema": "main",
+  "scope": "all_public_functions_and_tables",
+  "complete": true,
+  "evidence": [
+    {
+      "path": "coverage/current-functions.json",
+      "sha256": "a4e98ae0e31624f81a4ff278af177a81f3bbbb7b5c08bd43a480f3dfe9e5bdc7",
+      "description": "Complete worker-filtered duckdb_functions() export, including explicit empty physical tables."
+    },
+    {
+      "path": "coverage/current-tables.json",
+      "sha256": "afb1cf91cecd67b09b36cb5ccf7d79e245dc57a1f13b6685fcd2eb4860fd6dc8",
+      "description": "Complete worker-filtered duckdb_tables() export, including explicit empty physical tables."
+    },
+    {
+      "path": "coverage/current-views.json",
+      "sha256": "647caf66c38056048710b4ed1e0c4a266a7bea68d5e455eab03938d44f6d7c43",
+      "description": "Complete worker-filtered duckdb_views() export, including explicit empty physical tables."
+    },
+    {
+      "path": "coverage/catalog-provenance.json",
+      "sha256": "86f1e876f1eb519e0edae23f3e4c3f41150a1fbe37974a8c8484183e78db8030",
+      "description": "Release/current source identity, resolved release dependencies and unchanged-domain compatibility review."
+    }
+  ],
+  "objects": [
+    {
+      "schema": "main",
+      "name": "transform",
+      "kind": "function",
+      "signatures": [
+        "transform(x DOUBLE, y DOUBLE, from_crs VARCHAR, to_crs VARCHAR) -> STRUCT(x DOUBLE, y DOUBLE)"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "crs_name",
+      "kind": "function",
+      "signatures": [
+        "crs_name(crs VARCHAR) -> VARCHAR"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "to_webmercator",
+      "kind": "function",
+      "signatures": [
+        "to_webmercator(lon DOUBLE, lat DOUBLE) -> STRUCT(x DOUBLE, y DOUBLE)"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "crs_units",
+      "kind": "function",
+      "signatures": [
+        "crs_units(crs VARCHAR) -> VARCHAR"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "from_webmercator",
+      "kind": "function",
+      "signatures": [
+        "from_webmercator(x DOUBLE, y DOUBLE) -> STRUCT(lon DOUBLE, lat DOUBLE)"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "geodesic_distance",
+      "kind": "function",
+      "signatures": [
+        "geodesic_distance(lon1 DOUBLE, lat1 DOUBLE, lon2 DOUBLE, lat2 DOUBLE) -> DOUBLE"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "geodesic_bearing",
+      "kind": "function",
+      "signatures": [
+        "geodesic_bearing(lon1 DOUBLE, lat1 DOUBLE, lon2 DOUBLE, lat2 DOUBLE) -> DOUBLE"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "to_utm",
+      "kind": "function",
+      "signatures": [
+        "to_utm(lon DOUBLE, lat DOUBLE) -> STRUCT(easting DOUBLE, northing DOUBLE, \"zone\" INTEGER, hemisphere VARCHAR, epsg INTEGER)"
+      ],
+      "authentication": "none",
+      "access": "read"
+    }
+  ]
+}
