@@ -36,6 +36,7 @@ constant and reused in both the ``compute`` annotation and ``on_bind``.
 
 from __future__ import annotations
 
+import json
 from typing import Annotated, cast
 
 import pyarrow as pa
@@ -43,7 +44,7 @@ from vgi.arguments import ConstParam, Param, Returns
 from vgi.metadata import FunctionExample, NullHandling
 from vgi.scalar_function import BindParameters, BindResult, ScalarFunction
 
-from . import projection
+from . import composed, projection
 from .meta import object_tags
 from .schema_utils import field
 
@@ -52,25 +53,46 @@ from .schema_utils import field
 # ``proj`` worker; ``expected_result`` is deliberately omitted (the linter only
 # needs each query to execute cleanly, and pinning floating-point output is
 # brittle for ellipsoidal/PROJ results).
-_EXECUTABLE_EXAMPLES = (
-    "["
-    '{"description": "Transform a WGS84 lon/lat point to Web Mercator metres.",'
-    " \"sql\": \"SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857') AS xy\"},"
-    '{"description": "Project San Francisco into its UTM zone (10N).",'
-    ' "sql": "SELECT proj.main.to_utm(-122.42, 37.77) AS utm"},'
-    '{"description": "Convert a WGS84 point to Web Mercator via the shorthand.",'
-    ' "sql": "SELECT proj.main.to_webmercator(-122.4194, 37.7749) AS xy"},'
-    '{"description": "Round-trip Web Mercator metres back to lon/lat.",'
-    ' "sql": "SELECT proj.main.from_webmercator(-13627665.27, 4547675.35) AS lonlat"},'
-    '{"description": "Geodesic distance New York to London, in metres.",'
-    ' "sql": "SELECT proj.main.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074) AS m"},'
-    '{"description": "Initial geodesic bearing from New York toward London, degrees.",'
-    ' "sql": "SELECT proj.main.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074) AS deg"},'
-    '{"description": "Human-readable name of the WGS84 CRS.",'
-    ' "sql": "SELECT proj.main.crs_name(\'EPSG:4326\') AS name"},'
-    '{"description": "Axis units of the Web Mercator CRS.",'
-    ' "sql": "SELECT proj.main.crs_units(\'EPSG:3857\') AS units"}'
-    "]"
+_EXECUTABLE_EXAMPLES = json.dumps(
+    [
+        {
+            "description": "Transform a WGS84 lon/lat point to Web Mercator metres.",
+            "sql": "SELECT proj.main.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857') AS xy",
+        },
+        {
+            "description": "Project San Francisco into its UTM zone (10N).",
+            "sql": "SELECT proj.main.to_utm(-122.42, 37.77) AS utm",
+        },
+        {
+            "description": "Convert a WGS84 point to Web Mercator via the shorthand.",
+            "sql": "SELECT proj.main.to_webmercator(-122.4194, 37.7749) AS xy",
+        },
+        {
+            "description": "Round-trip Web Mercator metres back to lon/lat.",
+            "sql": "SELECT proj.main.from_webmercator(-13627665.27, 4547675.35) AS lonlat",
+        },
+        {
+            "description": "Geodesic distance New York to London, in metres.",
+            "sql": "SELECT proj.main.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074) AS m",
+        },
+        {
+            "description": "Initial geodesic bearing from New York toward London, degrees.",
+            "sql": "SELECT proj.main.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074) AS deg",
+        },
+        {
+            "description": "Human-readable name of the WGS84 CRS.",
+            "sql": "SELECT proj.main.crs_name('EPSG:4326') AS name",
+        },
+        {
+            "description": "Axis units of the Web Mercator CRS.",
+            "sql": "SELECT proj.main.crs_units('EPSG:3857') AS units",
+        },
+        # Composed (offline, deterministic) examples combining several functions.
+        *(
+            {"description": ex.description, "sql": ex.sql}
+            for ex in (composed.WEBMERCATOR_GROUND_DISTANCE, composed.DISTANCE_AND_HEADING_FROM_NYC)
+        ),
+    ]
 )
 
 # ---------------------------------------------------------------------------
@@ -100,7 +122,8 @@ _UTM_TYPE = pa.struct(
         field(
             "epsg",
             pa.int32(),
-            "EPSG code of the target UTM CRS (326xx N / 327xx S); feed it back into transform().",
+            "EPSG code of the target UTM CRS (326xx N / 327xx S), e.g. 32610 -> 'EPSG:32610' as a constant "
+            "transform() CRS (transform CRS args must be constants, not per-row values).",
         ),
     ]
 )
@@ -131,6 +154,7 @@ class TransformFunction(ScalarFunction):
                 sql="SELECT proj.transform(-122.42, 37.77, 'EPSG:4326', 'EPSG:3857')",
                 description="WGS84 lon/lat to Web Mercator metres",
             ),
+            composed.BNG_SITES_DISTANCE,
         ]
         tags = {
             **object_tags(
@@ -146,7 +170,8 @@ class TransformFunction(ScalarFunction):
                     "projection for distance/area work, or between two national grids.\n\n"
                     "**Inputs:** `x` (longitude/easting in `from_crs`), `y` "
                     "(latitude/northing in `from_crs`), `from_crs`, `to_crs`. The CRS "
-                    "arguments are constant-folded at plan time.\n\n"
+                    "arguments must be constants (folded at plan time); a per-row CRS column "
+                    "is a bind error.\n\n"
                     "**Output:** `STRUCT(x DOUBLE, y DOUBLE)` in the target CRS.\n\n"
                     "**Axis order:** always `always_xy` -- inputs/outputs are "
                     "`(x/easting/longitude, y/northing/latitude)` regardless of the CRS's "
@@ -239,6 +264,7 @@ class ToUtmFunction(ScalarFunction):
                 sql="SELECT proj.to_utm(-122.42, 37.77).zone",
                 description="UTM zone number for San Francisco (10)",
             ),
+            composed.UTM_GRID_VS_GEODESIC,
         ]
         tags = object_tags(
             title="Project to UTM Zone",
@@ -255,7 +281,9 @@ class ToUtmFunction(ScalarFunction):
                 "**Output:** `STRUCT(easting DOUBLE, northing DOUBLE, zone INT32, "
                 "hemisphere VARCHAR, epsg INT32)`; `hemisphere` is `'N'` or `'S'`, and "
                 "`epsg` is the target UTM CRS's EPSG code (`326xx` north / `327xx` south) "
-                "which you can feed straight back into `transform`. The zone is derived "
+                "which you can use as a constant `transform` CRS (e.g. `'EPSG:32610'`; "
+                "`transform`'s CRS arguments must be constants, so it cannot be passed per "
+                "row). The zone is derived "
                 "from the longitude (`floor(lon/6)+31`).\n\n"
                 "**Edge cases:** NULL, non-finite, or out-of-range (`|lat| > 90` / "
                 "`|lon| > 180`) coordinates yield a NULL struct."
@@ -275,8 +303,9 @@ class ToUtmFunction(ScalarFunction):
                 "- Returns `STRUCT(easting, northing, zone, hemisphere, epsg)` with metres "
                 "for easting/northing.\n"
                 "- The zone is chosen from the longitude; the hemisphere is `'N'`/`'S'`.\n"
-                "- `epsg` is the target UTM CRS code (`326xx`/`327xx`) — pass it back into "
-                "`transform` to reproject in or out of the same zone.\n"
+                "- `epsg` is the target UTM CRS code (`326xx`/`327xx`) — use it as a constant "
+                "`transform` CRS (e.g. `'EPSG:32610'`) to reproject in or out of that zone; "
+                "`transform`'s CRS arguments must be constants, not per-row columns.\n"
                 "- Out-of-range or NULL coordinates produce a NULL struct."
             ),
             keywords=[
@@ -431,6 +460,7 @@ class FromWebMercatorFunction(ScalarFunction):
                 sql="SELECT proj.from_webmercator(-13627665.27, 4547675.35)",
                 description="Web Mercator metres back to San Francisco lon/lat",
             ),
+            composed.WEBMERCATOR_GROUND_DISTANCE,
         ]
         tags = object_tags(
             title="Convert From Web Mercator",
@@ -518,6 +548,7 @@ class GeodesicDistanceFunction(ScalarFunction):
                 sql="SELECT proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074)",
                 description="New York to London (~5,585,000 m)",
             ),
+            composed.DISTANCE_AND_HEADING_FROM_NYC,
         ]
         tags = object_tags(
             title="Geodesic Distance Between Points",
@@ -601,6 +632,7 @@ class GeodesicBearingFunction(ScalarFunction):
                 sql="SELECT proj.geodesic_bearing(-74.006, 40.7128, -0.1276, 51.5074)",
                 description="Initial bearing from New York toward London",
             ),
+            composed.DISTANCE_AND_HEADING_FROM_NYC,
         ]
         tags = object_tags(
             title="Geodesic Initial Bearing",

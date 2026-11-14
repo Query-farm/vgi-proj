@@ -21,6 +21,7 @@ vgi_proj/
   worker.py            wheel-importable: assembles the `proj` catalog + ProjWorker (warms Transformers in run()) + main()
   projection.py        pure pyproj/PROJ transform + geodesic logic; no Arrow/VGI; unit-testable; cached Transformers
   scalars.py           per-row scalars; transform/to_utm/to_webmercator/from_webmercator return STRUCTs
+  composed.py          composed example SQL (several functions per query), defined once; referenced by worker.py + scalars.py
   schema_utils.py      pa.Field comment / column-doc helper
 bin/vgi-proj-worker    uv-run launch wrapper for a plain filesystem ATTACH LOCATION
 Dockerfile             single image serving http (default) + stdio; `pip install .[serve]`

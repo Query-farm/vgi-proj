@@ -147,6 +147,26 @@ distance** in **metres** — not a spherical haversine approximation — via
 SELECT proj.geodesic_distance(-74.006, 40.7128, -0.1276, 51.5074);  -- ~5,585,000 m
 ```
 
+The functions compose. Points stored in a projected CRS (here British National
+Grid, `EPSG:27700`) can be reprojected with `transform` and fed straight into
+`geodesic_distance` — this ranks sites by distance from the London Eye
+(Cardiff Castle 212.6 km, York Minster 281.5 km, Edinburgh Castle 535.0 km):
+
+```sql
+WITH eye AS (SELECT proj.transform(530600.0, 179700.0, 'EPSG:27700', 'EPSG:4326') AS o),
+sites(site, easting, northing) AS (VALUES
+    ('Edinburgh Castle', 325160.0, 673490.0),
+    ('Cardiff Castle',   318080.0, 176540.0),
+    ('York Minster',     460350.0, 452230.0)),
+ll AS (SELECT site, proj.transform(easting, northing, 'EPSG:27700', 'EPSG:4326') AS p FROM sites)
+SELECT site, round(proj.geodesic_distance(o.x, o.y, p.x, p.y) / 1000, 1) AS km_from_london_eye
+FROM ll CROSS JOIN eye
+ORDER BY km_from_london_eye;
+```
+
+`transform`'s CRS arguments must be constants, so `to_utm(...).epsg` can't be
+passed per row — use the code as a literal (e.g. `'EPSG:32610'`).
+
 ## Dependencies & licensing
 
 | Component | License | Notes |

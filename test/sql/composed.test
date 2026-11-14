@@ -1,0 +1,53 @@
+# name: test/sql/composed.test
+# description: Composed examples (vgi_proj/composed.py) -- several proj functions in one query
+# group: [vgi_proj]
+
+require-env VGI_PROJ_WORKER
+
+statement ok
+LOAD vgi;
+
+statement ok
+ATTACH 'proj' AS proj (TYPE vgi, LOCATION '{VGI_PROJ_WORKER}');
+
+# transform (British National Grid -> WGS84) feeding geodesic_distance.
+query TIII
+WITH eye AS (SELECT proj.main.transform(530600.0, 179700.0, 'EPSG:27700', 'EPSG:4326') AS o), sites(site, easting, northing) AS (VALUES ('Edinburgh Castle', 325160.0, 673490.0), ('Cardiff Castle', 318080.0, 176540.0), ('York Minster', 460350.0, 452230.0)), ll AS (SELECT site, proj.main.transform(easting, northing, 'EPSG:27700', 'EPSG:4326') AS p FROM sites) SELECT site, round(p.x, 2) AS lon, round(p.y, 2) AS lat, round(proj.main.geodesic_distance(o.x, o.y, p.x, p.y) / 1000) AS km_from_london_eye FROM ll CROSS JOIN eye ORDER BY km_from_london_eye
+----
+Cardiff Castle	-3.18	51.48	213.0
+York Minster	-1.08	53.96	282.0
+Edinburgh Castle	-3.2	55.95	535.0
+
+# to_utm grid distance runs a few metres short of the geodesic distance.
+query TII
+WITH segments(segment, lon1, lat1, lon2, lat2) AS (VALUES ('Ferry Building -> Golden Gate Bridge', -122.3937, 37.7955, -122.4783, 37.8199), ('Ferry Building -> Twin Peaks', -122.3937, 37.7955, -122.4477, 37.7544)), u AS (SELECT segment, lon1, lat1, lon2, lat2, proj.main.to_utm(lon1, lat1) AS a, proj.main.to_utm(lon2, lat2) AS b FROM segments) SELECT segment, a.zone, proj.main.geodesic_distance(lon1, lat1, lon2, lat2) - sqrt(power(b.easting - a.easting, 2) + power(b.northing - a.northing, 2)) BETWEEN 2 AND 4 FROM u ORDER BY segment
+----
+Ferry Building -> Golden Gate Bridge	10	true
+Ferry Building -> Twin Peaks	10	true
+
+# from_webmercator endpoints feeding geodesic_distance: Mercator inflation at 60 N.
+query TII
+WITH segments(segment, x1, y1, x2, y2) AS (VALUES ('Quito', -8738000.0, -24600.0, -8733000.0, -24600.0), ('Oslo', 1194000.0, 8381000.0, 1199000.0, 8381000.0)), ll AS (SELECT segment, proj.main.from_webmercator(x1, y1) AS a, proj.main.from_webmercator(x2, y2) AS b FROM segments) SELECT segment, round(a.lat), round(proj.main.geodesic_distance(a.lon, a.lat, b.lon, b.lat) / 10) * 10 FROM ll ORDER BY segment
+----
+Oslo	60.0	2510.0
+Quito	-0.0	5000.0
+
+# geodesic_distance + geodesic_bearing sheet from one origin.
+query TII
+WITH destinations(city, lon, lat) AS (VALUES ('London', -0.1276, 51.5074), ('Tokyo', 139.6917, 35.6895), ('Sydney', 151.2093, -33.8688)) SELECT city, round(proj.main.geodesic_distance(-74.006, 40.7128, lon, lat) / 1000) AS distance_km, round(proj.main.geodesic_bearing(-74.006, 40.7128, lon, lat)) AS initial_bearing_deg FROM destinations ORDER BY distance_km
+----
+London	5585.0	51.0
+Tokyo	10873.0	333.0
+Sydney	15988.0	266.0
+
+# transform's CRS arguments must be constants: to_utm(...).epsg cannot be passed per row.
+statement error
+WITH u AS (SELECT proj.main.to_utm(-122.42, 37.77) AS utm) SELECT proj.main.transform(utm.easting, utm.northing, 'EPSG:' || utm.epsg, 'EPSG:4326') FROM u
+----
+must be a constant value
+
+# ...but the epsg value works as a constant CRS (UTM zone 10N round-trip back to lon/lat).
+query II
+SELECT round(t.x, 4), round(t.y, 4) FROM (SELECT proj.main.transform(proj.main.to_utm(-122.42, 37.77).easting, proj.main.to_utm(-122.42, 37.77).northing, 'EPSG:32610', 'EPSG:4326') AS t)
+----
+-122.42	37.77

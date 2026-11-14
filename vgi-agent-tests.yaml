@@ -34,3 +34,17 @@ tasks:
     reference_sql: "SELECT round(proj.main.from_webmercator(-13627665.27, 4547675.35).lon, 2)"
     success_criteria: "Answers -122.42 (the recovered longitude)."
     ignore_column_names: true
+  - name: closest_city_to_london
+    reference_sql: >-
+      SELECT city, round(proj.main.geodesic_distance(-0.1276, 51.5074, lon, lat) / 1000) AS km
+      FROM (VALUES ('Paris', 2.3522, 48.8566), ('Berlin', 13.405, 52.52), ('Madrid', -3.7038, 40.4168),
+      ('Rome', 12.4964, 41.9028)) AS c(city, lon, lat) ORDER BY km LIMIT 1
+    success_criteria: "Answers Paris, about 344 km from London (Berlin ~935, Madrid ~1263, Rome ~1435)."
+    ignore_column_names: true
+  - name: web_mercator_segment_ground_length
+    reference_sql: >-
+      SELECT round(proj.main.geodesic_distance(a.lon, a.lat, b.lon, b.lat))
+      FROM (SELECT proj.main.from_webmercator(-2438000.0, 9374000.0) AS a,
+      proj.main.from_webmercator(-2438000.0, 9384000.0) AS b)
+    success_criteria: "Answers about 4372 metres (10,000 Mercator metres at latitude ~64.1 N near Reykjavik)."
+    ignore_column_names: true

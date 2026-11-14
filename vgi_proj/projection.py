@@ -190,8 +190,8 @@ def to_utm(lon: float | None, lat: float | None) -> UTMResult | None:
 
     The zone is the standard 6-degree band ``floor((lon+180)/6)+1``; the
     hemisphere is ``'N'`` for ``lat >= 0`` else ``'S'``; ``epsg`` is the target
-    UTM CRS's EPSG code (``326xx`` north / ``327xx`` south), which can be fed
-    straight back into ``transform`` for a round-trip. Returns ``None`` for
+    UTM CRS's EPSG code (``326xx`` north / ``327xx`` south), usable as a
+    (constant) ``transform`` CRS for a round-trip. Returns ``None`` for
     NULL/non-finite or out-of-range coordinates (``|lat| > 90`` /
     ``|lon| > 180``).
     """

@@ -42,6 +42,7 @@ from vgi import Worker
 from vgi.catalog import Catalog, Schema
 
 from vgi_proj import projection
+from vgi_proj.composed import COMPOSED_EXAMPLES
 from vgi_proj.meta import keywords_json
 from vgi_proj.scalars import SCALAR_FUNCTIONS
 
@@ -145,6 +146,26 @@ _AGENT_TEST_TASKS = json.dumps(
                 "Convert the Web Mercator point x = -13627665.27, y = 4547675.35 (EPSG:3857) back "
                 "to WGS84, and give the recovered longitude in degrees, rounded to 2 decimal "
                 "places."
+            ),
+        },
+        {
+            # Composed: geodesic_distance over a small set of candidate cities + ranking.
+            "name": "closest_city_to_london",
+            "prompt": (
+                "Using accurate WGS84 geodesic distance, which of these cities is closest to "
+                "London (longitude -0.1276, latitude 51.5074): Paris (2.3522, 48.8566), Berlin "
+                "(13.405, 52.52), Madrid (-3.7038, 40.4168) or Rome (12.4964, 41.9028)? Return one "
+                "row with two columns: the city name, and its distance from London in kilometres "
+                "rounded to the nearest whole kilometre."
+            ),
+        },
+        {
+            # Composed: from_webmercator on both endpoints feeding geodesic_distance.
+            "name": "web_mercator_segment_ground_length",
+            "prompt": (
+                "Two points are stored in Web Mercator (EPSG:3857) metres: A at x = -2438000, "
+                "y = 9374000 and B at x = -2438000, y = 9384000. What is the true WGS84 geodesic "
+                "ground distance between them in metres, rounded to the nearest metre?"
             ),
         },
     ]
@@ -336,6 +357,8 @@ _MAIN_SCHEMA_TAGS = {
                 "description": "Axis units of the Web Mercator CRS.",
                 "sql": "SELECT proj.main.crs_units('EPSG:3857')",
             },
+            # Composed examples combining several functions (defined once in vgi_proj.composed).
+            *({"description": ex.description, "sql": ex.sql} for ex in COMPOSED_EXAMPLES),
         ]
     ),
 }
