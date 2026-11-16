@@ -110,13 +110,10 @@ make test                     # both
 uv run ruff check . && uv run mypy vgi_proj/
 ```
 
-`make test-sql` sets `VGI_PROJ_WORKER` to the project venv interpreter running
-the worker (`$(CURDIR)/.venv/bin/python $(CURDIR)/proj_worker.py`, absolute so it
-survives haybarn's cd into a staging dir; the venv carries the locked SDK, unlike
-`uv run <script>` whose PEP 723 env can cache a stale SDK), puts `~/.local/bin`
-on PATH, and runs `haybarn-unittest --keep-home --test-dir . "test/sql/*"`.
-Install the runner once with `uv tool install --prerelease allow 'haybarn-unittest>=2.0.0rc11,<2.1'`. CI
-(`.github/workflows/ci.yml`) runs unit + lint + a gated `e2e` job.
+`make test-sql` runs `ci/run-integration.sh` with `WORKER=.venv/bin/vgi-proj-worker`
+over stdio, launch and http (`make tools` installs the pinned `haybarn-unittest`
+into `.tools`). CI (`.github/workflows/ci.yml`) runs unit + lint + the same
+script in an `integration` transport matrix.
 
 Everything is pure/offline (no network, no API keys, no model downloads) — PROJ
 and its data are bundled in the wheel — so the suite is fast and hermetic.

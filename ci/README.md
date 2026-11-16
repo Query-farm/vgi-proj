@@ -1,45 +1,42 @@
-# CI: the vgi-proj worker integration suite
+# CI: the vgi-proj SQL suite
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs the unit tests
-and this repo's sqllogictest suite (`test/sql/*.test`) against the vgi-proj
-VGI worker through the **real DuckDB `vgi` extension** on every push / PR.
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs `test/sql/*.test`
+through the **real DuckDB `vgi` extension** with
+[`run-integration.sh`](run-integration.sh), the vgi-starter's standard harness.
+`make test-sql` runs the same script locally over all three transports.
 
-## How it works (no C++ build)
+## How it works
 
-Rather than building the vgi DuckDB extension from source, CI drives a
-**prebuilt** standalone `haybarn-unittest` (the DuckDB/Haybarn sqllogictest
-runner, published in Haybarn's releases) and installs the **signed** `vgi`
-extension from the Haybarn community channel:
+- The published `haybarn-unittest` sqllogictest runner (pinned by
+  `HAYBARN_VERSION`) runs the tests; the signed `vgi` extension is installed with
+  `FORCE INSTALL vgi FROM community` (plus `httpfs` and `json` from core).
+- The tests are staged into a temp dir: `require vgi` becomes `LOAD vgi`, and
+  on the http transport `LOAD httpfs` is added after each `LOAD vgi;`.
+- The tests ATTACH `LOCATION '{VGI_PROJ_WORKER}'`; the script exports that variable
+  per transport.
+- Guards: error-skipping is disabled with a test config, any skip not listed in
+  `EXPECTED_SKIP_REASONS` fails the run, and fewer than `MIN_EXECUTED` executed
+  test files fails it too.
 
-1. **Install the worker** — `uv sync --frozen` into a venv. `proj_worker.py`
-   is a self-contained PEP 723 stdio worker the extension can spawn via
-   `uv run proj_worker.py`; its inline deps (`pyproj`, which bundles PROJ and
-   its data grids in the wheel) resolve from PyPI with no native install or
-   network grid download.
-2. **Download the runner** — the matching `haybarn_unittest-*` asset per
-   platform from the latest Haybarn release.
-3. **Preprocess** — the standalone runner links none of the extensions the
-   tests gate on, so [`preprocess-require.awk`](preprocess-require.awk) rewrites
-   each `require <ext>` into an explicit signed `INSTALL <ext> FROM
-   {community,core}; LOAD <ext>;`. These tests skip `require vgi` (haybarn
-   silently SKIPs it) and `LOAD vgi;` directly, so the awk also injects an
-   `INSTALL vgi FROM community;` right before each bare `LOAD vgi;`. `require-env`
-   and everything else pass through untouched.
-4. **Run** — [`run-integration.sh`](run-integration.sh) stages the preprocessed
-   tree, points `VGI_PROJ_WORKER` at `uv run proj_worker.py`, warms the
-   extension cache once, then runs the suite in a single `haybarn-unittest`
-   invocation. Any failed assertion exits non-zero and fails the job.
+## Transports
+
+| `TRANSPORT` | `VGI_PROJ_WORKER`                    | How the worker is reached                                |
+| ----------- | -------------------------- | -------------------------------------------------------- |
+| `stdio`     | `$WORKER`                  | DuckDB spawns the worker per connection (stdin/stdout)   |
+| `launch`    | `launch:$WORKER`           | DuckDB starts it once on an AF_UNIX socket and pools it  |
+| `http`      | `http://127.0.0.1:<port>`  | the script starts `$WORKER --http --port 0`              |
+
+`WORKER` is the console script `.venv/bin/vgi-proj-worker` (`uv sync --locked
+--all-extras`; the `http` extra provides the HTTP server).
 
 ## Run it locally
 
 ```bash
-uv sync --python 3.13                       # install the worker + deps
-# point HAYBARN_UNITTEST at a haybarn-unittest binary (or a local DuckDB
-# `unittest` built with the vgi extension), and the worker at the stdio command:
-HAYBARN_UNITTEST=/path/to/haybarn-unittest \
-VGI_PROJ_WORKER="uv run --python 3.13 proj_worker.py" \
-  ci/run-integration.sh
+make test-sql                       # stdio, launch and http
+make test-sql TRANSPORTS=launch     # one transport
 ```
 
-Or use the Makefile target `make test-sql`, which installs `haybarn-unittest`
-as a uv tool and points the worker at `uv run --python 3.13 proj_worker.py`.
+The Docker image test (`docker-publish.yml`) reuses the script: `WORKER` may be
+a full stdio command line (`docker run -i --rm IMAGE stdio`), `WORKER_URL`
+points the http transport at an already-running container, and `TEST_PATTERN`
+narrows the run to one file.
