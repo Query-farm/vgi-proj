@@ -70,7 +70,7 @@ def _finite(v: float | None) -> bool:
         return False
     try:
         f = float(v)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return False
     return not (math.isnan(f) or math.isinf(f))
 
